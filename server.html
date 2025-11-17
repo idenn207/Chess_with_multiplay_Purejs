@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LAN Multi Game - Server</title>
+  <link rel="stylesheet" href="server.css">
+</head>
+
+<body>
+  <div class="container">
+    <h1>🎮 LAN Multi Game (Server)</h1>
+
+    <div class="game-selection" id="gameSelection">
+      <h3>게임 선택</h3>
+      <div class="game-buttons">
+        <button class="game-btn" data-game="chess">
+          <span class="icon">♔</span>
+          <span>체스</span>
+        </button>
+        <button class="game-btn" data-game="gomoku">
+          <span class="icon">⚫</span>
+          <span>오목</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="server-info" id="serverInfo">
+      <h3>서버 정보</h3>
+      <div class="info-row">
+        <strong>선택한 게임:</strong>
+        <span id="selectedGame">-</span>
+      </div>
+      <div class="info-row">
+        <strong>서버 IP:</strong>
+        <span id="serverIP">사용자 IP 확인 필요</span>
+      </div>
+      <div class="info-row">
+        <strong>포트:</strong>
+        <span>9090</span>
+      </div>
+      <div class="info-row">
+        <strong>상태:</strong>
+        <span>
+          <span class="status-indicator status-waiting"></span>
+          <span id="serverStatus">상대방 연결 대기 중...</span>
+        </span>
+      </div>
+    </div>
+
+    <div id="gameArea">
+      <div class="game-info">
+        <div class="info-item">
+          <strong>내 색상:</strong> <span id="myColor">-</span>
+        </div>
+        <div class="info-item">
+          <strong>현재 차례:</strong> <span id="currentTurn">-</span>
+        </div>
+      </div>
+
+      <div id="chessBoard"></div>
+      <div id="gomokuBoard"></div>
+
+      <div id="status">게임을 선택하세요</div>
+
+      <div class="button-group">
+        <button id="resignBtn" disabled>기권</button>
+        <button id="newGameBtn">새 게임</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="promotion-modal">
+    <div class="modal-content">
+      <h2>폰 승급</h2>
+      <p>승급할 기물을 선택하세요:</p>
+      <div class="promotion-pieces" id="promotionPieces"></div>
+    </div>
+  </div>
+
+  <script src="chess-logic.js"></script>
+  <script src="gomoku-logic.js"></script>
+  <script src="server.js"></script>
+</body>
+
+</html>

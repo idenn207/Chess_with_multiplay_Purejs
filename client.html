@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LAN Multi Game - Client</title>
+  <link rel="stylesheet" href="client.css">
+</head>
+
+<body>
+  <div class="container">
+    <h1>🎮 LAN Multi Game (Client)</h1>
+
+    <div id="connection-section">
+      <div class="connection-panel">
+        <h3>서버 연결</h3>
+        <div class="instruction">
+          서버의 IP 주소를 입력하고 연결하세요.<br>
+          서버에서 선택한 게임이 자동으로 시작됩니다.
+        </div>
+        <div class="input-group">
+          <label for="serverIP">서버 IP 주소:</label>
+          <input type="text" id="serverIP" placeholder="예: 150.150.48.102" value="150.150.48.102">
+        </div>
+        <button class="connect-btn" id="connectBtn">서버에 연결</button>
+      </div>
+    </div>
+
+    <div id="game-section">
+      <div class="game-info">
+        <div class="info-item">
+          <strong>게임:</strong> <span id="gameName">-</span>
+        </div>
+        <div class="info-item">
+          <strong>내 색상:</strong> <span id="myColor">-</span>
+        </div>
+        <div class="info-item">
+          <strong>현재 차례:</strong> <span id="currentTurn">-</span>
+        </div>
+      </div>
+
+      <div id="chessBoard"></div>
+      <div id="gomokuBoard"></div>
+
+      <div id="status">상대방 차례입니다</div>
+
+      <div class="button-group">
+        <button id="resignBtn" disabled>기권</button>
+        <button id="newGameBtn">새 게임</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="promotion-modal">
+    <div class="modal-content">
+      <h2>폰 승급</h2>
+      <p>승급할 기물을 선택하세요:</p>
+      <div class="promotion-pieces" id="promotionPieces"></div>
+    </div>
+  </div>
+
+  <script src="chess-logic.js"></script>
+  <script src="gomoku-logic.js"></script>
+  <script src="client.js"></script>
+</body>
+
+</html>
