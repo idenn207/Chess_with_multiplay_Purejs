@@ -55,6 +55,10 @@ class GomokuRenderer {
   }
 
   handleCellClick(row, col) {
+    if (this.game.currentTurn !== this.game.myColor || this.game.gameOver) {
+      return;
+    }
+
     if (!this.game.isValidMove(row, col)) {
       return;
     }
@@ -108,3 +112,4 @@ class GomokuRenderer {
     }
   }
 }
+

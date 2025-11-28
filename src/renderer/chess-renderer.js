@@ -123,6 +123,10 @@ class ChessRenderer {
   }
 
   handleSquareClick(row, col) {
+    if (this.game.currentTurn !== this.game.myColor || this.game.gameOver) {
+      return;
+    }
+
     const piece = this.game.board[row][col];
 
     if (!this.game.selectedSquare) {
@@ -238,3 +242,4 @@ class ChessRenderer {
     }
   }
 }
+

@@ -163,6 +163,8 @@ class MultiGameApp {
     this.elements.serverInfo.classList.add('active');
     this.elements.gameArea.classList.add('active');
 
+    document.getElementById('newGameBtn').style.display = 'none';
+
     this.updateStatus('연결 코드를 생성하고 있습니다...', '');
 
     // WebRTC Offer 생성
@@ -278,6 +280,8 @@ class MultiGameApp {
     this.elements.gameArea.classList.add('active');
     document.getElementById('resignBtn').disabled = false;
 
+    document.getElementById('newGameBtn').style.display = 'none';
+
     this.updateStatus('상대방 차례입니다', '');
     this.updateCurrentTurn();
   }
@@ -307,6 +311,7 @@ class MultiGameApp {
   handleGameOver(winner, reason) {
     this.game.gameOver = true;
     document.getElementById('resignBtn').disabled = true;
+    document.getElementById('newGameBtn').style.display = '';
 
     let message = '';
 
@@ -352,3 +357,4 @@ class MultiGameApp {
 
 // 앱 초기화
 const app = new MultiGameApp();
+
