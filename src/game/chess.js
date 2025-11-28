@@ -1,21 +1,5 @@
-// 체스 기물 유니코드
-const PIECES = {
-  K: '♔',
-  Q: '♕',
-  R: '♖',
-  B: '♗',
-  N: '♘',
-  P: '♙',
-  k: '♚',
-  q: '♛',
-  r: '♜',
-  b: '♝',
-  n: '♞',
-  p: '♟',
-};
-
 // 체스 게임 로직
-class ChessGame {
+export default class ChessGame {
   constructor() {
     this.board = this.getInitialBoard();
     this.selectedSquare = null;

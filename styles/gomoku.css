@@ -1,0 +1,77 @@
+/* 오목 보드 */
+.gomoku-board {
+  display: grid;
+  grid-template-columns: repeat(15, 40px);
+  grid-template-rows: repeat(15, 40px);
+  gap: 0;
+  background: #dcb35c;
+  border: 3px solid #8b6914;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.gomoku-cell {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #8b6914;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+}
+
+.gomoku-cell:hover:not(.has-stone) {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.gomoku-cell.has-stone {
+  cursor: default;
+}
+
+.gomoku-stone {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+.gomoku-stone.black {
+  background: radial-gradient(circle at 30% 30%, #555, #000);
+}
+
+.gomoku-stone.white {
+  background: radial-gradient(circle at 30% 30%, #fff, #ddd);
+}
+
+.gomoku-stone.winning {
+  animation: gomoku-winning 0.5s ease-in-out 3;
+}
+
+@keyframes gomoku-winning {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+/* 반응형 오목 보드 */
+@media (max-width: 768px) {
+  .gomoku-board {
+    grid-template-columns: repeat(15, 30px);
+    grid-template-rows: repeat(15, 30px);
+  }
+
+  .gomoku-cell {
+    width: 30px;
+    height: 30px;
+  }
+
+  .gomoku-stone {
+    width: 26px;
+    height: 26px;
+  }
+}
