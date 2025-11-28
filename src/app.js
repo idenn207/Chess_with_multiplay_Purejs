@@ -1,5 +1,3 @@
-import gameRegistry from './game-registry.js';
-
 // 메인 앱
 class MultiGameApp {
   constructor() {
@@ -7,10 +5,10 @@ class MultiGameApp {
     this.gameId = null;
     this.game = null;
     this.renderer = null;
-    this.connected = false;
-    this.channelName = null;
-    this.checkForClient = null;
-    this.messageCheck = null;
+
+    // WebRTC 관련
+    this.webrtc = new WebRTCManager();
+    this.signalingUI = new SignalingUI();
 
     this.elements = {
       roleSelection: document.getElementById('roleSelection'),
@@ -27,8 +25,53 @@ class MultiGameApp {
   }
 
   init() {
+    this.signalingUI.initialize();
+    this.setupWebRTCCallbacks();
     this.showRoleSelection();
     this.setupEventListeners();
+  }
+
+  setupWebRTCCallbacks() {
+    // 연결 성공
+    this.webrtc.onConnected = () => {
+      console.log('WebRTC Connected!');
+      this.signalingUI.showConnected();
+      this.onPeerConnected();
+    };
+
+    // 연결 끊김
+    this.webrtc.onDisconnected = () => {
+      console.log('WebRTC Disconnected');
+      this.updateStatus('연결이 끊어졌습니다.', 'error');
+    };
+
+    // 메시지 수신
+    this.webrtc.onMessage = (message) => {
+      this.handleMessage(message);
+    };
+
+    // Signaling UI 콜백
+    this.signalingUI.onOfferSubmit = async (offerSdp) => {
+      // 클라이언트: Offer 받고 Answer 생성
+      try {
+        this.signalingUI.setStatus('응답 생성 중...', 'info');
+        const answerSdp = await this.webrtc.createAnswer(offerSdp);
+        this.signalingUI.showAnswerDisplay(answerSdp);
+      } catch (e) {
+        this.signalingUI.showError('응답 생성 실패: ' + e.message);
+      }
+    };
+
+    this.signalingUI.onAnswerSubmit = async (answerSdp) => {
+      // 호스트: Answer 받고 연결 완료
+      try {
+        this.signalingUI.setStatus('연결 중...', 'info');
+        await this.webrtc.receiveAnswer(answerSdp);
+        // 연결은 onConnected 콜백에서 처리
+      } catch (e) {
+        this.signalingUI.showError('연결 실패: ' + e.message);
+      }
+    };
   }
 
   setupEventListeners() {
@@ -39,7 +82,7 @@ class MultiGameApp {
       });
     });
 
-    // 서버 연결
+    // 서버 연결 (클라이언트용)
     document.getElementById('connectBtn').addEventListener('click', () => {
       this.connectToServer();
     });
@@ -88,15 +131,15 @@ class MultiGameApp {
       btn.className = 'game-btn';
       btn.dataset.gameId = config.id;
       btn.innerHTML = `
-                <span class="icon">${config.icon}</span>
-                <span>${config.name}</span>
-            `;
+        <span class="icon">${config.icon}</span>
+        <span>${config.name}</span>
+      `;
       btn.addEventListener('click', () => this.selectGame(config.id));
       container.appendChild(btn);
     });
   }
 
-  selectGame(gameId) {
+  async selectGame(gameId) {
     this.gameId = gameId;
     const config = gameRegistry.get(gameId);
 
@@ -120,39 +163,32 @@ class MultiGameApp {
     this.elements.serverInfo.classList.add('active');
     this.elements.gameArea.classList.add('active');
 
-    this.updateStatus('상대방이 연결될 때까지 기다려주세요...', '');
-    this.startServer();
+    this.updateStatus('연결 코드를 생성하고 있습니다...', '');
+
+    // WebRTC Offer 생성
+    await this.startServer();
   }
 
-  startServer() {
-    this.channelName = 'multigame_' + Date.now();
-    localStorage.setItem('multigame_server_channel', this.channelName);
-    localStorage.setItem(this.channelName + '_game', this.gameId);
-    localStorage.setItem(this.channelName + '_status', 'waiting');
+  async startServer() {
+    try {
+      const statusIndicator = document.getElementById('statusIndicator');
+      const serverStatus = document.getElementById('serverStatus');
 
-    console.log('서버 시작. 채널:', this.channelName, '게임:', this.gameId);
+      statusIndicator.classList.add('waiting');
+      serverStatus.textContent = '연결 코드 생성 중...';
 
-    const statusIndicator = document.getElementById('statusIndicator');
-    const serverStatus = document.getElementById('serverStatus');
-    statusIndicator.classList.add('waiting');
+      // Offer 생성
+      const offerSdp = await this.webrtc.createOffer();
 
-    this.checkForClient = setInterval(() => {
-      const clientConnected = localStorage.getItem(this.channelName + '_client');
-      if (clientConnected && !this.connected) {
-        this.connected = true;
-        clearInterval(this.checkForClient);
+      serverStatus.textContent = '상대방 대기 중...';
+      this.updateStatus('연결 코드를 상대방에게 전달하세요.', '');
 
-        serverStatus.textContent = '상대방 연결됨!';
-        statusIndicator.classList.remove('waiting');
-        statusIndicator.classList.add('ready');
-
-        const config = gameRegistry.get(this.gameId);
-        this.updateStatus(`게임 시작! 내 차례입니다 (${config.serverLabel})`, 'turn');
-        document.getElementById('resignBtn').disabled = false;
-        this.updateCurrentTurn();
-        this.startMessageListener();
-      }
-    }, 500);
+      // Signaling UI 표시
+      this.signalingUI.showHostMode(offerSdp);
+    } catch (e) {
+      console.error('Failed to create offer:', e);
+      this.updateStatus('연결 코드 생성 실패: ' + e.message, 'error');
+    }
   }
 
   setupClient() {
@@ -161,67 +197,37 @@ class MultiGameApp {
   }
 
   connectToServer() {
-    const serverIP = document.getElementById('serverIP').value.trim();
-    if (!serverIP) {
-      alert('서버 IP 주소를 입력하세요');
-      return;
-    }
-
-    this.channelName = localStorage.getItem('multigame_server_channel');
-
-    if (!this.channelName) {
-      alert('같은 브라우저에서 서버를 먼저 시작해주세요 (테스트 모드)');
-      return;
-    }
-
-    this.gameId = localStorage.getItem(this.channelName + '_game');
-
-    if (!this.gameId) {
-      alert('서버에서 게임을 선택하지 않았습니다');
-      return;
-    }
-
-    const config = gameRegistry.get(this.gameId);
-
-    // 게임 초기화
-    this.game = gameRegistry.createGame(this.gameId, 'client');
-    this.renderer = gameRegistry.createRenderer(this.gameId, this.game, this.elements.boardContainer, (moveData) => this.handleLocalMove(moveData));
-    this.renderer.initialize();
-
-    // 클라이언트 연결 알림
-    localStorage.setItem(this.channelName + '_client', 'connected');
-    this.connected = true;
-
-    // UI 업데이트
-    document.getElementById('currentGameName').textContent = config.name;
-    document.getElementById('myColor').textContent = config.clientLabel;
-
-    this.elements.connectionPanel.classList.remove('active');
-    this.elements.gameArea.classList.add('active');
-    document.getElementById('resignBtn').disabled = false;
-
-    this.updateStatus('상대방 차례입니다', '');
-    this.updateCurrentTurn();
-    this.startMessageListener();
+    // Signaling UI 표시 (Offer 입력 모드)
+    this.signalingUI.showClientMode();
   }
 
-  startMessageListener() {
-    const msgKey = this.role === 'server' ? '_client_msg' : '_server_msg';
+  // 연결 성공 시 호출
+  onPeerConnected() {
+    const statusIndicator = document.getElementById('statusIndicator');
+    const serverStatus = document.getElementById('serverStatus');
 
-    this.messageCheck = setInterval(() => {
-      const message = localStorage.getItem(this.channelName + msgKey);
-      if (message) {
-        localStorage.removeItem(this.channelName + msgKey);
-        const data = JSON.parse(message);
-        this.handleMessage(data);
-      }
-    }, 100);
-  }
+    if (this.role === 'server') {
+      statusIndicator.classList.remove('waiting');
+      statusIndicator.classList.add('ready');
+      serverStatus.textContent = '상대방 연결됨!';
 
-  sendMessage(message) {
-    if (this.connected) {
-      const msgKey = this.role === 'server' ? '_server_msg' : '_client_msg';
-      localStorage.setItem(this.channelName + msgKey, JSON.stringify(message));
+      const config = gameRegistry.get(this.gameId);
+      this.updateStatus(`게임 시작! 내 차례입니다 (${config.serverLabel})`, 'turn');
+      document.getElementById('resignBtn').disabled = false;
+      this.updateCurrentTurn();
+
+      // 클라이언트에게 게임 정보 전송
+      this.webrtc.send({
+        type: 'gameInfo',
+        data: {
+          gameId: this.gameId,
+          gameState: this.game.getGameState(),
+        },
+      });
+    } else {
+      // 클라이언트는 gameInfo 메시지 대기
+      this.elements.connectionPanel.classList.remove('active');
+      this.updateStatus('게임 정보를 받는 중...', '');
     }
   }
 
@@ -229,6 +235,11 @@ class MultiGameApp {
     const { type, data } = message;
 
     switch (type) {
+      case 'gameInfo':
+        // 클라이언트: 게임 정보 수신
+        this.initClientGame(data);
+        break;
+
       case 'move':
         this.renderer.updateFromMove(data);
         this.updateCurrentTurn();
@@ -247,8 +258,32 @@ class MultiGameApp {
     }
   }
 
+  // 클라이언트: 게임 초기화
+  initClientGame(data) {
+    const { gameId, gameState } = data;
+    this.gameId = gameId;
+    const config = gameRegistry.get(gameId);
+
+    // 게임 초기화
+    this.game = gameRegistry.createGame(gameId, 'client');
+    this.game.applyMove(gameState);
+
+    this.renderer = gameRegistry.createRenderer(gameId, this.game, this.elements.boardContainer, (moveData) => this.handleLocalMove(moveData));
+    this.renderer.initialize();
+
+    // UI 업데이트
+    document.getElementById('currentGameName').textContent = config.name;
+    document.getElementById('myColor').textContent = config.clientLabel;
+
+    this.elements.gameArea.classList.add('active');
+    document.getElementById('resignBtn').disabled = false;
+
+    this.updateStatus('상대방 차례입니다', '');
+    this.updateCurrentTurn();
+  }
+
   handleLocalMove(moveData) {
-    this.sendMessage({ type: 'move', data: moveData });
+    this.webrtc.send({ type: 'move', data: moveData });
     this.updateCurrentTurn();
 
     if (moveData.gameOver) {
@@ -261,7 +296,7 @@ class MultiGameApp {
   resign() {
     if (!confirm('정말 기권하시겠습니까?')) return;
 
-    this.sendMessage({ type: 'resign' });
+    this.webrtc.send({ type: 'resign' });
 
     const config = gameRegistry.get(this.gameId);
     const opponentColor = this.game.myColor === config.serverColor ? config.clientColor : config.serverColor;
@@ -309,20 +344,9 @@ class MultiGameApp {
   }
 
   cleanup() {
-    if (this.messageCheck) clearInterval(this.messageCheck);
-    if (this.checkForClient) clearInterval(this.checkForClient);
     if (this.renderer) this.renderer.cleanup();
-
-    if (this.channelName) {
-      if (this.role === 'server') {
-        localStorage.removeItem('multigame_server_channel');
-        localStorage.removeItem(this.channelName + '_game');
-        localStorage.removeItem(this.channelName + '_status');
-      }
-      localStorage.removeItem(this.channelName + '_client');
-      localStorage.removeItem(this.channelName + '_server_msg');
-      localStorage.removeItem(this.channelName + '_client_msg');
-    }
+    if (this.webrtc) this.webrtc.disconnect();
+    if (this.signalingUI) this.signalingUI.cleanup();
   }
 }
 

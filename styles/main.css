@@ -366,6 +366,152 @@ h3 {
   flex: 1;
 }
 
+/* Signaling 모달 */
+.signaling-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.signaling-modal.active {
+  display: flex;
+}
+
+.signaling-content {
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.signaling-content h2 {
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.signaling-content p {
+  margin-bottom: 20px;
+  color: #666;
+}
+
+/* 단계 표시 */
+.signaling-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 25px;
+}
+
+.signaling-steps .step {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.signaling-steps .step.active {
+  background: #667eea;
+  color: white;
+}
+
+.signaling-steps .step.completed {
+  background: #48bb78;
+  color: white;
+}
+
+.signaling-steps .step-line {
+  width: 60px;
+  height: 3px;
+  background: #e0e0e0;
+  margin: 0 10px;
+}
+
+/* 섹션 */
+.signaling-section {
+  margin-bottom: 20px;
+}
+
+.signaling-section label {
+  display: block;
+  margin-bottom: 8px;
+  color: #555;
+  font-weight: 600;
+}
+
+.signaling-section textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.85em;
+  font-family: monospace;
+  resize: vertical;
+  margin-bottom: 10px;
+}
+
+.signaling-section textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.signaling-section textarea[readonly] {
+  background: #f8f9fa;
+  cursor: text;
+}
+
+/* 상태 메시지 */
+.signaling-status {
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.signaling-status.info {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+.signaling-status.success {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.signaling-status.warning {
+  background: #fffbe6;
+  color: #faad14;
+}
+
+.signaling-status.error {
+  background: #fff2f0;
+  color: #ff4d4f;
+}
+
+.copy-status {
+  text-align: center;
+  margin-top: 5px;
+  font-size: 0.9em;
+  color: #52c41a;
+}
+
 /* 반응형 */
 @media (max-width: 768px) {
   .container {

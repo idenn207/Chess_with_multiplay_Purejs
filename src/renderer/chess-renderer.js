@@ -15,7 +15,7 @@ const PIECES = {
 };
 
 // 체스 렌더러
-export default class ChessRenderer {
+class ChessRenderer {
   constructor(game, container, onMove) {
     this.game = game;
     this.container = container;
@@ -46,18 +46,14 @@ export default class ChessRenderer {
     this.container.innerHTML = '';
     this.container.appendChild(this.boardElement);
 
-    // 프로모션 모달 생성
     this.createPromotionModal();
-
     this.render();
   }
 
   createPromotionModal() {
-    // 모달 컨테이너
     this.promotionModal = document.createElement('div');
     this.promotionModal.className = 'chess-promotion-modal';
 
-    // 모달 내용
     const content = document.createElement('div');
     content.className = 'chess-promotion-content';
 
@@ -78,7 +74,6 @@ export default class ChessRenderer {
     this.promotionModal.appendChild(content);
     document.body.appendChild(this.promotionModal);
 
-    // 배경 클릭 시 모달 닫기 방지
     this.promotionModal.addEventListener('click', (e) => {
       if (e.target === this.promotionModal) {
         e.stopPropagation();

@@ -42,27 +42,19 @@
 
     <!-- 서버 연결 (클라이언트 전용) -->
     <div class="connection-panel" id="connectionPanel">
-      <h2>서버 연결</h2>
+      <h2>방 참가</h2>
       <div class="instruction">
-        호스트의 IP 주소를 입력하고 연결하세요.
+        호스트에게 연결 코드를 받아 입력하세요.
       </div>
-      <div class="input-group">
-        <label for="serverIP">서버 IP 주소:</label>
-        <input type="text" id="serverIP" placeholder="예: 150.150.48.102" value="150.150.48.102">
-      </div>
-      <button class="action-btn primary" id="connectBtn">서버에 연결</button>
+      <button class="action-btn primary full-width" id="connectBtn">연결 코드 입력</button>
     </div>
 
     <!-- 서버 정보 -->
     <div class="server-info" id="serverInfo">
-      <h3>서버 정보</h3>
+      <h3>호스트 정보</h3>
       <div class="info-row">
         <strong>선택한 게임:</strong>
         <span id="selectedGameName">-</span>
-      </div>
-      <div class="info-row">
-        <strong>서버 IP:</strong>
-        <span id="serverIPDisplay">사용자 IP 확인 필요</span>
       </div>
       <div class="info-row">
         <strong>상태:</strong>
@@ -99,8 +91,21 @@
     </div>
   </div>
 
+  <!-- 게임 로직 -->
+  <script src="src/game/chess.js"></script>
+  <script src="src/game/gomoku.js"></script>
+  
+  <!-- 렌더러 -->
+  <script src="src/renderer/chess-renderer.js"></script>
+  <script src="src/renderer/gomoku-renderer.js"></script>
+  
+  <!-- 네트워크 -->
+  <script src="src/network/webrtc-manager.js"></script>
+  <script src="src/network/signaling-ui.js"></script>
+  
   <!-- 게임 레지스트리 및 메인 앱 -->
-  <script type="module" src="src/app.js"></script>
+  <script src="src/game-registry.js"></script>
+  <script src="src/app.js"></script>
 </body>
 
 </html>

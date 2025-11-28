@@ -1,8 +1,3 @@
-import ChessGame from './game/chess.js';
-import GomokuGame from './game/gomoku.js';
-import ChessRenderer from './renderer/chess-renderer.js';
-import GomokuRenderer from './renderer/gomoku-renderer.js';
-
 // 게임 레지스트리
 class GameRegistry {
   constructor() {
@@ -73,21 +68,3 @@ gameRegistry.register({
   clientLabel: '백 (후공)',
   getTurnLabel: (color) => (color === 'black' ? '흑' : '백'),
 });
-
-export default gameRegistry;
-
-// 새 게임 추가 예시:
-/*
-gameRegistry.register({
-    id: 'checkers',
-    name: '체커',
-    icon: '🔴',
-    gameClass: CheckersGame,
-    rendererClass: CheckersRenderer,
-    serverColor: 'red',
-    clientColor: 'black',
-    serverLabel: '빨강 (선공)',
-    clientLabel: '검정 (후공)',
-    getTurnLabel: (color) => color === 'red' ? '빨강' : '검정'
-});
-*/

@@ -1,5 +1,5 @@
 // 체스 게임 로직
-export default class ChessGame {
+class ChessGame {
   constructor() {
     this.board = this.getInitialBoard();
     this.selectedSquare = null;

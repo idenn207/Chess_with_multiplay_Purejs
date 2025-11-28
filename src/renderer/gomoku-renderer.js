@@ -1,5 +1,5 @@
 // 오목 렌더러
-export default class GomokuRenderer {
+class GomokuRenderer {
   constructor(game, container, onMove) {
     this.game = game;
     this.container = container;
@@ -44,7 +44,6 @@ export default class GomokuRenderer {
         const stoneDiv = document.createElement('div');
         stoneDiv.className = `gomoku-stone ${stone}`;
 
-        // 승리한 돌 표시
         if (this.game.winningLine.some((pos) => pos.row === row && pos.col === col)) {
           stoneDiv.classList.add('winning');
         }

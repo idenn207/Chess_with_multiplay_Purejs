@@ -1,5 +1,5 @@
 // 오목 게임 로직
-export default class GomokuGame {
+class GomokuGame {
   constructor() {
     this.board = Array(15)
       .fill(null)
