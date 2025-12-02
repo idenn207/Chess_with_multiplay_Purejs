@@ -28,6 +28,10 @@
   cursor: default;
 }
 
+.gomoku-cell.last-move {
+  background-color: rgba(255, 0, 0, 0.3);
+}
+
 .gomoku-stone {
   width: 34px;
   height: 34px;

@@ -90,7 +90,7 @@ class ChessRenderer {
       const piece = this.game.board[row][col];
 
       square.innerHTML = piece ? `<span class="chess-piece">${PIECES[piece]}</span>` : '';
-      square.classList.remove('selected', 'valid-move', 'valid-capture', 'in-check');
+      square.classList.remove('selected', 'valid-move', 'valid-capture', 'in-check', 'last-move');
     });
 
     if (!this.game.gameOver) {
@@ -100,6 +100,13 @@ class ChessRenderer {
         const kingSquare = this.getSquareElement(kingPos[0], kingPos[1]);
         kingSquare.classList.add('in-check');
       }
+    }
+
+    if (this.game.lastMove) {
+      const fromSquare = this.getSquareElement(this.game.lastMove.from[0], this.game.lastMove.from[1]);
+      const toSquare = this.getSquareElement(this.game.lastMove.to[0], this.game.lastMove.to[1]);
+      fromSquare.classList.add('last-move');
+      toSquare.classList.add('last-move');
     }
 
     if (this.game.selectedSquare) {
@@ -219,6 +226,7 @@ class ChessRenderer {
       castlingRights: this.game.castlingRights,
       enPassantTarget: this.game.enPassantTarget,
       kingPositions: this.game.kingPositions,
+      lastMove: this.game.lastMove,
       gameOver,
       winner,
       reason,

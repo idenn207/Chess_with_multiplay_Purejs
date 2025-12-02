@@ -38,7 +38,7 @@ class GomokuRenderer {
       const stone = this.game.board[row][col];
 
       cell.innerHTML = '';
-      cell.classList.remove('has-stone');
+      cell.classList.remove('has-stone', 'last-move');
 
       if (stone) {
         const stoneDiv = document.createElement('div');
@@ -50,6 +50,10 @@ class GomokuRenderer {
 
         cell.appendChild(stoneDiv);
         cell.classList.add('has-stone');
+      }
+
+      if (this.game.lastMove && this.game.lastMove.row === row && this.game.lastMove.col === col) {
+        cell.classList.add('last-move');
       }
     });
   }
@@ -95,6 +99,7 @@ class GomokuRenderer {
       winner,
       reason,
       winningLine: this.game.winningLine,
+      lastMove: this.game.lastMove,
     };
 
     this.onMove(moveData);

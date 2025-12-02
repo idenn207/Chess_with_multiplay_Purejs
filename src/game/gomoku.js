@@ -9,6 +9,7 @@ class GomokuGame {
     this.gameOver = false;
     this.moveHistory = [];
     this.winningLine = [];
+    this.lastMove = null;
   }
 
   resetBoard() {
@@ -19,6 +20,7 @@ class GomokuGame {
     this.gameOver = false;
     this.moveHistory = [];
     this.winningLine = [];
+    this.lastMove = null;
   }
 
   isValidMove(row, col) {
@@ -31,6 +33,7 @@ class GomokuGame {
 
     this.board[row][col] = color;
     this.moveHistory.push({ row, col, color });
+    this.lastMove = { row, col };
 
     return true;
   }
@@ -116,6 +119,7 @@ class GomokuGame {
       currentTurn: this.currentTurn,
       gameOver: this.gameOver,
       winningLine: this.winningLine,
+      lastMove: this.lastMove,
     };
   }
 
@@ -124,5 +128,6 @@ class GomokuGame {
     this.currentTurn = moveData.currentTurn;
     this.gameOver = moveData.gameOver;
     this.winningLine = moveData.winningLine || [];
+    this.lastMove = moveData.lastMove || null;
   }
 }
