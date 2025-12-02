@@ -10,6 +10,11 @@ class MultiGameApp {
     this.webrtc = new WebRTCManager();
     this.signalingUI = new SignalingUI();
 
+    // 타이머 관련
+    this.turnTimeLimit = 30; // 30초
+    this.currentTurnTime = this.turnTimeLimit;
+    this.timerInterval = null;
+
     this.elements = {
       roleSelection: document.getElementById('roleSelection'),
       gameSelection: document.getElementById('gameSelection'),
@@ -19,6 +24,7 @@ class MultiGameApp {
       boardContainer: document.getElementById('boardContainer'),
       status: document.getElementById('status'),
       pageTitle: document.getElementById('pageTitle'),
+      turnTimer: document.getElementById('turnTimer'),
     };
 
     this.init();
@@ -218,6 +224,9 @@ class MultiGameApp {
       document.getElementById('resignBtn').disabled = false;
       this.updateCurrentTurn();
 
+      // 타이머 시작 (서버가 선공)
+      this.startTimer();
+
       // 클라이언트에게 게임 정보 전송
       this.webrtc.send({
         type: 'gameInfo',
@@ -243,6 +252,7 @@ class MultiGameApp {
         break;
 
       case 'move':
+        this.stopTimer();
         this.renderer.updateFromMove(data);
         this.updateCurrentTurn();
 
@@ -250,12 +260,23 @@ class MultiGameApp {
           this.handleGameOver(data.winner, data.reason);
         } else {
           this.updateStatus('내 차례입니다', 'turn');
+          this.startTimer();
         }
         break;
 
       case 'resign':
+        this.stopTimer();
         const winner = this.game.myColor;
         this.handleGameOver(winner, 'resignation');
+        break;
+
+      case 'timeout':
+        // 상대방 타임아웃
+        this.stopTimer();
+        this.updateStatus('상대방이 시간 초과했습니다. 내 차례입니다', 'turn');
+        this.game.currentTurn = this.game.myColor;
+        this.updateCurrentTurn();
+        this.startTimer();
         break;
     }
   }
@@ -287,6 +308,7 @@ class MultiGameApp {
   }
 
   handleLocalMove(moveData) {
+    this.stopTimer();
     this.webrtc.send({ type: 'move', data: moveData });
     this.updateCurrentTurn();
 
@@ -309,6 +331,7 @@ class MultiGameApp {
   }
 
   handleGameOver(winner, reason) {
+    this.stopTimer();
     this.game.gameOver = true;
     document.getElementById('resignBtn').disabled = true;
     document.getElementById('newGameBtn').style.display = '';
@@ -318,7 +341,7 @@ class MultiGameApp {
     if (winner === 'draw') {
       message = '무승부';
       if (reason === 'stalemate') message += ' (스테일메이트)';
-      if (reason === 'board_full') message += ' (판이 가득 참)';
+      if (reason === 'board_full') message += ' (판이 가득 함)';
     } else if (winner === this.game.myColor) {
       message = '승리했습니다! 🎉';
     } else {
@@ -352,6 +375,65 @@ class MultiGameApp {
     if (this.renderer) this.renderer.cleanup();
     if (this.webrtc) this.webrtc.disconnect();
     if (this.signalingUI) this.signalingUI.cleanup();
+    this.stopTimer();
+  }
+
+  // 타이머 시작
+  startTimer() {
+    this.stopTimer();
+    this.currentTurnTime = this.turnTimeLimit;
+    this.updateTimerDisplay();
+
+    this.timerInterval = setInterval(() => {
+      this.currentTurnTime--;
+      this.updateTimerDisplay();
+
+      if (this.currentTurnTime <= 0) {
+        this.handleTimerExpired();
+      }
+    }, 1000);
+  }
+
+  // 타이머 정지
+  stopTimer() {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+  }
+
+  // 타이머 디스플레이 업데이트
+  updateTimerDisplay() {
+    this.elements.turnTimer.textContent = this.currentTurnTime;
+
+    // 시간에 따라 색상 변경
+    this.elements.turnTimer.classList.remove('warning', 'danger');
+    if (this.currentTurnTime <= 5) {
+      this.elements.turnTimer.classList.add('danger');
+    } else if (this.currentTurnTime <= 10) {
+      this.elements.turnTimer.classList.add('warning');
+    }
+  }
+
+  // 타이머 만료 처리
+  handleTimerExpired() {
+    this.stopTimer();
+
+    if (this.game.gameOver || this.game.currentTurn !== this.game.myColor) {
+      return;
+    }
+
+    // 타임아웃 메시지 전송
+    this.webrtc.send({ type: 'timeout' });
+
+    // 상대방에게 턴 넘김
+    this.updateStatus('시간 초과! 상대방 차례입니다', 'error');
+
+    // 턴 변경
+    const config = gameRegistry.get(this.gameId);
+    const opponentColor = this.game.myColor === config.serverColor ? config.clientColor : config.serverColor;
+    this.game.currentTurn = opponentColor;
+    this.updateCurrentTurn();
   }
 }
 

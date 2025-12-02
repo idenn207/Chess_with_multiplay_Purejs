@@ -323,6 +323,32 @@ h3 {
   color: #333;
 }
 
+/* 타이머 */
+.timer {
+  font-weight: 700;
+  font-size: 1.2em;
+  color: #48bb78;
+  transition: color 0.3s;
+}
+
+.timer.warning {
+  color: #ed8936;
+}
+
+.timer.danger {
+  color: #f56565;
+  animation: pulse 0.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
 /* 보드 컨테이너 */
 #boardContainer {
   min-height: 400px;
