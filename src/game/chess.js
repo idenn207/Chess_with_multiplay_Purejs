@@ -15,6 +15,7 @@ class ChessGame {
     this.enPassantTarget = null;
     this.kingPositions = { white: [7, 4], black: [0, 4] };
     this.moveHistory = [];
+    this.lastMove = null;
   }
 
   getInitialBoard() {
@@ -440,6 +441,11 @@ class ChessGame {
       piece: piece,
     });
 
+    this.lastMove = {
+      from: [fromRow, fromCol],
+      to: [toRow, toCol],
+    };
+
     return true;
   }
 
@@ -449,6 +455,7 @@ class ChessGame {
     this.castlingRights = moveData.castlingRights;
     this.enPassantTarget = moveData.enPassantTarget;
     this.kingPositions = moveData.kingPositions;
+    this.lastMove = moveData.lastMove || null;
   }
 
   getGameState() {
@@ -458,6 +465,7 @@ class ChessGame {
       castlingRights: this.castlingRights,
       enPassantTarget: this.enPassantTarget,
       kingPositions: this.kingPositions,
+      lastMove: this.lastMove,
     };
   }
 }

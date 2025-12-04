@@ -62,6 +62,10 @@
   animation: chess-pulse 1s infinite;
 }
 
+.chess-square.last-move {
+  background-color: rgba(255, 255, 0, 0.5) !important;
+}
+
 .chess-piece {
   pointer-events: none;
 }
