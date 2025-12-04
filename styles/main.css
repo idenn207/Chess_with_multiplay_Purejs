@@ -1,7 +1,26 @@
 /* 공통 스타일 */
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)),
+    repeating-linear-gradient(90deg,
+      #2a2620 0px,
+      #2a2620 2px,
+      #332e28 2px,
+      #332e28 4px,
+      #3d3630 4px,
+      #3d3630 8px
+    ),
+    repeating-linear-gradient(0deg,
+      #2a2620 0px,
+      #2a2620 20px,
+      #332e28 20px,
+      #332e28 40px,
+      #3d3630 40px,
+      #3d3630 60px
+    );
+  background-size: 100% 100%;
+  filter: grayscale(0.3);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -312,6 +331,7 @@ h3 {
   padding: 15px;
   background: #f5f5f5;
   border-radius: 10px;
+  transition: all 0.5s ease-in-out;
 }
 
 .info-item {
@@ -323,30 +343,20 @@ h3 {
   color: #333;
 }
 
-/* 타이머 */
-.timer {
-  font-weight: 700;
-  font-size: 1.2em;
-  color: #48bb78;
-  transition: color 0.3s;
+/* 게임 집중 모드에서 게임 정보 숨기기 */
+.container.game-focused .game-info {
+  display: none;
 }
 
-.timer.warning {
-  color: #ed8936;
-}
 
-.timer.danger {
-  color: #f56565;
-  animation: pulse 0.5s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
+/* 게임 보드 래퍼 (턴 표시기 포함) */
+.game-board-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0;
+  min-height: 400px;
 }
 
 /* 보드 컨테이너 */
@@ -355,30 +365,197 @@ h3 {
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
+  z-index: 1;
 }
 
-/* 상태 메시지 */
-#status {
-  text-align: center;
-  font-size: 1.3em;
-  margin-top: 20px;
-  padding: 15px;
-  background: #f5f5f5;
-  border-radius: 10px;
-  font-weight: 600;
+/* 턴 표시기 */
+.turn-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  opacity: 0.3;
+  transition: all 0.4s ease;
+  pointer-events: none;
 }
 
-#status.turn {
-  color: #48bb78;
+.turn-indicator.left {
+  left: -150px;
+  background: linear-gradient(to right,
+    rgba(102, 126, 234, 0.6) 0%,
+    rgba(102, 126, 234, 0.4) 50%,
+    rgba(102, 126, 234, 0) 100%);
 }
 
-#status.error {
-  color: #f56565;
+.turn-indicator.right {
+  right: -150px;
+  background: linear-gradient(to left,
+    rgba(245, 101, 101, 0.6) 0%,
+    rgba(245, 101, 101, 0.4) 50%,
+    rgba(245, 101, 101, 0) 100%);
 }
 
-#status.gameover {
-  color: #667eea;
+.turn-indicator.active {
+  opacity: 1;
+  animation: turnGlow 2s ease-in-out infinite;
+}
+
+.turn-label {
   font-size: 1.5em;
+  font-weight: 700;
+  color: white;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+  letter-spacing: 3px;
+  transform: rotate(-90deg);
+  white-space: nowrap;
+}
+
+/* 타이머 바 래퍼 */
+.timer-bar-wrapper {
+  width: 30px;
+  height: 200px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 15px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+}
+
+/* 타이머 바 (하단에서 상단으로 채워짐) */
+.timer-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to top,
+    rgba(72, 187, 120, 0.9) 0%,
+    rgba(72, 187, 120, 0.7) 100%);
+  transition: height 1s linear, background 0.3s ease;
+}
+
+.turn-indicator.left .timer-bar {
+  background: linear-gradient(to top,
+    rgba(102, 126, 234, 0.9) 0%,
+    rgba(102, 126, 234, 0.7) 100%);
+}
+
+.turn-indicator.right .timer-bar {
+  background: linear-gradient(to top,
+    rgba(245, 101, 101, 0.9) 0%,
+    rgba(245, 101, 101, 0.7) 100%);
+}
+
+/* 타이머 바 경고 상태 */
+.timer-bar.warning {
+  background: linear-gradient(to top,
+    rgba(237, 137, 54, 0.9) 0%,
+    rgba(237, 137, 54, 0.7) 100%);
+}
+
+.timer-bar.danger {
+  background: linear-gradient(to top,
+    rgba(245, 101, 101, 0.9) 0%,
+    rgba(245, 101, 101, 0.7) 100%);
+  animation: timerBarPulse 0.5s ease-in-out infinite;
+}
+
+@keyframes timerBarPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* 타이머 텍스트 */
+.timer-text {
+  font-size: 1.8em;
+  font-weight: 900;
+  color: white;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+  min-width: 40px;
+  text-align: center;
+}
+
+@keyframes turnGlow {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 게임 상태 오버레이 */
+.game-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(5px);
+}
+
+.game-overlay.active {
+  display: flex;
+  animation: overlayFadeIn 0.5s ease-out;
+}
+
+.overlay-content {
+  text-align: center;
+  animation: overlaySlideUp 0.6s ease-out;
+}
+
+.overlay-message {
+  font-size: 5em;
+  font-weight: 900;
+  color: white;
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.5),
+               0 0 60px rgba(102, 126, 234, 0.8);
+  letter-spacing: 5px;
+  animation: overlayPulse 2s ease-in-out infinite;
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes overlaySlideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes overlayPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
 }
 
 /* 버튼 그룹 */
@@ -628,64 +805,22 @@ h3 {
   }
 }
 
-/* 상태 메시지 강조 */
-.container.game-focused #status {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease-in-out;
+/* 턴 표시기 강조 */
+.container.game-focused .turn-indicator.active {
+  animation: turnIndicatorGlow 2s ease-in-out infinite;
 }
 
-.container.game-focused #status.turn {
-  animation: turnPulse 2s ease-in-out infinite;
-}
-
-@keyframes turnPulse {
+@keyframes turnIndicatorGlow {
   0%, 100% {
-    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.2);
+    opacity: 0.8;
+    filter: brightness(1);
   }
   50% {
-    box-shadow: 0 4px 20px rgba(72, 187, 120, 0.4);
+    opacity: 1;
+    filter: brightness(1.2);
   }
 }
 
-/* 타이머 강조 */
-.container.game-focused .timer {
-  font-size: 1.4em;
-  padding: 4px 12px;
-  background: rgba(72, 187, 120, 0.1);
-  border-radius: 8px;
-  transition: all 0.3s ease-in-out;
-}
-
-.container.game-focused .timer.warning {
-  background: rgba(237, 137, 54, 0.15);
-  animation: warningPulse 1s ease-in-out infinite;
-}
-
-.container.game-focused .timer.danger {
-  background: rgba(245, 101, 101, 0.15);
-  animation: dangerShake 0.5s ease-in-out infinite;
-}
-
-@keyframes warningPulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-}
-
-@keyframes dangerShake {
-  0%, 100% {
-    transform: translateX(0) scale(1);
-  }
-  25% {
-    transform: translateX(-3px) scale(1.08);
-  }
-  75% {
-    transform: translateX(3px) scale(1.08);
-  }
-}
 
 /* 버튼 강조 */
 .container.game-focused .button-group button {
@@ -725,7 +860,38 @@ h3 {
     font-size: 1.3em;
   }
 
-  .container.game-focused .timer {
-    font-size: 1.2em;
+  /* 턴 표시기 반응형 */
+  .turn-indicator {
+    width: 80px;
+    gap: 10px;
+  }
+
+  .turn-indicator.left {
+    left: -80px;
+  }
+
+  .turn-indicator.right {
+    right: -80px;
+  }
+
+  .turn-label {
+    font-size: 1em;
+    letter-spacing: 2px;
+  }
+
+  /* 타이머 바 반응형 */
+  .timer-bar-wrapper {
+    width: 20px;
+    height: 150px;
+  }
+
+  .timer-text {
+    font-size: 1.3em;
+  }
+
+  /* 오버레이 메시지 반응형 */
+  .overlay-message {
+    font-size: 3em;
+    letter-spacing: 3px;
   }
 }

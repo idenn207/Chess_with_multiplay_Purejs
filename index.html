@@ -67,7 +67,7 @@
 
     <!-- 게임 영역 -->
     <div id="gameArea">
-      <div class="game-info">
+      <div class="game-info" id="gameInfo">
         <div class="info-item">
           <strong>게임:</strong> <span id="currentGameName">-</span>
         </div>
@@ -77,19 +77,42 @@
         <div class="info-item">
           <strong>현재 차례:</strong> <span id="currentTurn">-</span>
         </div>
-        <div class="info-item">
-          <strong>남은 시간:</strong> <span id="turnTimer" class="timer">30</span>
-        </div>
       </div>
 
-      <!-- 게임 보드 컨테이너 -->
-      <div id="boardContainer"></div>
+      <!-- 게임 보드와 턴 표시기 래퍼 -->
+      <div class="game-board-wrapper">
+        <!-- 왼쪽 턴 표시기 (나) -->
+        <div class="turn-indicator left" id="turnIndicatorLeft">
+          <div class="turn-label">ME</div>
+          <div class="timer-bar-wrapper">
+            <div class="timer-bar" id="myTimerBar"></div>
+          </div>
+          <div class="timer-text" id="myTimerText">30</div>
+        </div>
 
-      <div id="status">게임을 시작하세요</div>
+        <!-- 게임 보드 컨테이너 -->
+        <div id="boardContainer"></div>
+
+        <!-- 오른쪽 턴 표시기 (상대방) -->
+        <div class="turn-indicator right" id="turnIndicatorRight">
+          <div class="turn-label">OPPONENT</div>
+          <div class="timer-bar-wrapper">
+            <div class="timer-bar" id="opponentTimerBar"></div>
+          </div>
+          <div class="timer-text" id="opponentTimerText">30</div>
+        </div>
+      </div>
 
       <div class="button-group">
         <button class="action-btn danger" id="resignBtn" disabled>기권</button>
         <button class="action-btn secondary" id="newGameBtn">새 게임</button>
+      </div>
+    </div>
+
+    <!-- 게임 상태 오버레이 -->
+    <div class="game-overlay" id="gameOverlay">
+      <div class="overlay-content">
+        <div class="overlay-message" id="overlayMessage">Winner!</div>
       </div>
     </div>
   </div>
