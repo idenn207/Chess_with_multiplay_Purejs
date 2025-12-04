@@ -16,6 +16,7 @@ class MultiGameApp {
     this.timerInterval = null;
 
     this.elements = {
+      container: document.querySelector('.container'),
       roleSelection: document.getElementById('roleSelection'),
       gameSelection: document.getElementById('gameSelection'),
       connectionPanel: document.getElementById('connectionPanel'),
@@ -214,6 +215,11 @@ class MultiGameApp {
     const statusIndicator = document.getElementById('statusIndicator');
     const serverStatus = document.getElementById('serverStatus');
 
+    // 게임 집중 모드 활성화
+    setTimeout(() => {
+      this.elements.container.classList.add('game-focused');
+    }, 500);
+
     if (this.role === 'server') {
       statusIndicator.classList.remove('waiting');
       statusIndicator.classList.add('ready');
@@ -305,6 +311,11 @@ class MultiGameApp {
 
     this.updateStatus('상대방 차례입니다', '');
     this.updateCurrentTurn();
+
+    // 게임 집중 모드 활성화 (클라이언트용)
+    setTimeout(() => {
+      this.elements.container.classList.add('game-focused');
+    }, 300);
   }
 
   handleLocalMove(moveData) {
@@ -376,6 +387,9 @@ class MultiGameApp {
     if (this.webrtc) this.webrtc.disconnect();
     if (this.signalingUI) this.signalingUI.cleanup();
     this.stopTimer();
+
+    // 게임 집중 모드 해제
+    this.elements.container.classList.remove('game-focused');
   }
 
   // 타이머 시작

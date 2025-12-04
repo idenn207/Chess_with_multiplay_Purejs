@@ -538,6 +538,166 @@ h3 {
   color: #52c41a;
 }
 
+/* 게임 집중 모드 */
+.container.game-focused {
+  max-width: 1000px;
+  transition: all 0.5s ease-in-out;
+}
+
+.container.game-focused #pageTitle {
+  font-size: 1.5em;
+  margin-bottom: 10px;
+  transition: all 0.4s ease-in-out;
+}
+
+/* 비게임 요소 숨기기 */
+.container.game-focused .server-info {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  transition: all 0.5s ease-in-out;
+}
+
+.container.game-focused .connection-panel {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  transition: all 0.5s ease-in-out;
+}
+
+/* 게임 영역 강조 */
+.container.game-focused #gameArea {
+  animation: gameAreaGlow 0.8s ease-in-out;
+}
+
+@keyframes gameAreaGlow {
+  0% {
+    transform: scale(0.98);
+    opacity: 0.8;
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(102, 126, 234, 0.3);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 게임 정보 강조 */
+.container.game-focused .game-info {
+  background: linear-gradient(135deg, #667eea15, #764ba215);
+  border: 2px solid #667eea40;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15);
+  transition: all 0.5s ease-in-out;
+  animation: slideDown 0.5s ease-out;
+}
+
+@keyframes slideDown {
+  0% {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 보드 컨테이너 강조 */
+.container.game-focused #boardContainer {
+  animation: boardFadeIn 0.6s ease-in-out;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+@keyframes boardFadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 상태 메시지 강조 */
+.container.game-focused #status {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease-in-out;
+}
+
+.container.game-focused #status.turn {
+  animation: turnPulse 2s ease-in-out infinite;
+}
+
+@keyframes turnPulse {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.2);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(72, 187, 120, 0.4);
+  }
+}
+
+/* 타이머 강조 */
+.container.game-focused .timer {
+  font-size: 1.4em;
+  padding: 4px 12px;
+  background: rgba(72, 187, 120, 0.1);
+  border-radius: 8px;
+  transition: all 0.3s ease-in-out;
+}
+
+.container.game-focused .timer.warning {
+  background: rgba(237, 137, 54, 0.15);
+  animation: warningPulse 1s ease-in-out infinite;
+}
+
+.container.game-focused .timer.danger {
+  background: rgba(245, 101, 101, 0.15);
+  animation: dangerShake 0.5s ease-in-out infinite;
+}
+
+@keyframes warningPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes dangerShake {
+  0%, 100% {
+    transform: translateX(0) scale(1);
+  }
+  25% {
+    transform: translateX(-3px) scale(1.08);
+  }
+  75% {
+    transform: translateX(3px) scale(1.08);
+  }
+}
+
+/* 버튼 강조 */
+.container.game-focused .button-group button {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease-in-out;
+}
+
+.container.game-focused .button-group button:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  transform: translateY(-3px);
+}
+
 /* 반응형 */
 @media (max-width: 768px) {
   .container {
@@ -559,5 +719,13 @@ h3 {
   .game-info {
     flex-direction: column;
     gap: 10px;
+  }
+
+  .container.game-focused #pageTitle {
+    font-size: 1.3em;
+  }
+
+  .container.game-focused .timer {
+    font-size: 1.2em;
   }
 }
