@@ -23,6 +23,8 @@ class ChessRenderer {
     this.boardElement = null;
     this.promotionModal = null;
     this.pendingPromotion = null;
+    this.isAnimating = false; // 애니메이션 중 여부
+    this.animationDuration = 400; // 애니메이션 시간 (ms)
   }
 
   initialize() {
@@ -130,6 +132,9 @@ class ChessRenderer {
   }
 
   handleSquareClick(row, col) {
+    // 애니메이션 중이면 클릭 무시
+    if (this.isAnimating) return;
+
     if (this.game.currentTurn !== this.game.myColor || this.game.gameOver) {
       return;
     }
@@ -156,7 +161,8 @@ class ChessRenderer {
         return;
       }
 
-      this.executeMove(selectedRow, selectedCol, row, col);
+      // 애니메이션과 함께 이동 실행
+      this.animateMove(selectedRow, selectedCol, row, col, null);
     } else {
       if (piece && this.game.getPieceColor(piece) === this.game.myColor) {
         this.game.selectedSquare = [row, col];
@@ -194,8 +200,81 @@ class ChessRenderer {
 
   handlePromotion(piece) {
     const { fromRow, fromCol, toRow, toCol } = this.pendingPromotion;
-    this.executeMove(fromRow, fromCol, toRow, toCol, piece);
+    // 애니메이션과 함께 승급 이동 실행
+    this.animateMove(fromRow, fromCol, toRow, toCol, piece);
     this.pendingPromotion = null;
+  }
+
+  /**
+   * 기물 이동 애니메이션
+   * @param {number} fromRow - 시작 행
+   * @param {number} fromCol - 시작 열
+   * @param {number} toRow - 도착 행
+   * @param {number} toCol - 도착 열
+   * @param {string|null} promotionPiece - 승급 기물 (선택)
+   */
+  animateMove(fromRow, fromCol, toRow, toCol, promotionPiece = null) {
+    this.isAnimating = true;
+
+    const fromSquare = this.getSquareElement(fromRow, fromCol);
+    const toSquare = this.getSquareElement(toRow, toCol);
+    const piece = this.game.board[fromRow][fromCol];
+    const capturedPiece = this.game.board[toRow][toCol];
+
+    // 시작 위치와 끝 위치 계산
+    const fromRect = fromSquare.getBoundingClientRect();
+    const toRect = toSquare.getBoundingClientRect();
+
+    // 이동할 기물 복제
+    const animatingPiece = document.createElement('span');
+    animatingPiece.className = 'chess-piece piece-animating';
+    animatingPiece.textContent = PIECES[piece];
+    animatingPiece.style.left = fromRect.left + 'px';
+    animatingPiece.style.top = fromRect.top + 'px';
+    animatingPiece.style.width = fromRect.width + 'px';
+    animatingPiece.style.height = fromRect.height + 'px';
+    animatingPiece.style.fontSize = window.getComputedStyle(fromSquare.querySelector('.chess-piece')).fontSize;
+    animatingPiece.style.display = 'flex';
+    animatingPiece.style.alignItems = 'center';
+    animatingPiece.style.justifyContent = 'center';
+    document.body.appendChild(animatingPiece);
+
+    // 원래 위치의 기물 숨기기
+    const originalPiece = fromSquare.querySelector('.chess-piece');
+    if (originalPiece) {
+      originalPiece.style.visibility = 'hidden';
+    }
+
+    // 잡히는 기물 애니메이션
+    if (capturedPiece) {
+      const capturedElement = toSquare.querySelector('.chess-piece');
+      if (capturedElement) {
+        capturedElement.style.animation = `pieceCaptured ${this.animationDuration * 0.8}ms ease-out forwards`;
+      }
+    }
+
+    // 이동 거리 계산
+    const deltaX = toRect.left - fromRect.left;
+    const deltaY = toRect.top - fromRect.top;
+
+    // 애니메이션 적용
+    requestAnimationFrame(() => {
+      animatingPiece.style.transition = `all ${this.animationDuration}ms ease-in-out`;
+      animatingPiece.style.left = toRect.left + 'px';
+      animatingPiece.style.top = toRect.top + 'px';
+      animatingPiece.style.animation = `pieceMove ${this.animationDuration}ms ease-in-out`;
+    });
+
+    // 애니메이션 완료 후 처리
+    setTimeout(() => {
+      // 애니메이션 요소 제거
+      animatingPiece.remove();
+
+      // 실제 이동 실행
+      this.executeMove(fromRow, fromCol, toRow, toCol, promotionPiece);
+
+      this.isAnimating = false;
+    }, this.animationDuration);
   }
 
   executeMove(fromRow, fromCol, toRow, toCol, promotionPiece = null) {
@@ -234,11 +313,133 @@ class ChessRenderer {
 
     this.onMove(moveData);
     this.render();
+
+    // 착지 애니메이션
+    const toSquare = this.getSquareElement(toRow, toCol);
+    const landedPiece = toSquare.querySelector('.chess-piece');
+    if (landedPiece) {
+      landedPiece.style.animation = `pieceLand 200ms ease-out`;
+      setTimeout(() => {
+        landedPiece.style.animation = '';
+      }, 200);
+    }
   }
 
+  /**
+   * 상대방 이동 반영 (애니메이션 포함)
+   */
   updateFromMove(moveData) {
+    // 마지막 이동 정보가 있으면 애니메이션 실행
+    if (moveData.lastMove && this.game.lastMove) {
+      const prevLastMove = this.game.lastMove;
+      const newLastMove = moveData.lastMove;
+
+      // 이전 lastMove와 다르면 상대방이 이동한 것
+      if (
+        prevLastMove.from[0] !== newLastMove.from[0] ||
+        prevLastMove.from[1] !== newLastMove.from[1] ||
+        prevLastMove.to[0] !== newLastMove.to[0] ||
+        prevLastMove.to[1] !== newLastMove.to[1]
+      ) {
+        this.animateOpponentMove(moveData);
+        return;
+      }
+    } else if (moveData.lastMove && !this.game.lastMove) {
+      // 첫 번째 이동
+      this.animateOpponentMove(moveData);
+      return;
+    }
+
     this.game.applyMove(moveData);
     this.render();
+  }
+
+  /**
+   * 상대방 기물 이동 애니메이션
+   */
+  animateOpponentMove(moveData) {
+    const { from, to } = moveData.lastMove;
+    const fromRow = from[0];
+    const fromCol = from[1];
+    const toRow = to[0];
+    const toCol = to[1];
+
+    const fromSquare = this.getSquareElement(fromRow, fromCol);
+    const toSquare = this.getSquareElement(toRow, toCol);
+
+    if (!fromSquare || !toSquare) {
+      this.game.applyMove(moveData);
+      this.render();
+      return;
+    }
+
+    const pieceElement = fromSquare.querySelector('.chess-piece');
+    if (!pieceElement) {
+      this.game.applyMove(moveData);
+      this.render();
+      return;
+    }
+
+    this.isAnimating = true;
+
+    const piece = this.game.board[fromRow][fromCol];
+    const capturedPiece = this.game.board[toRow][toCol];
+
+    // 시작/끝 위치 계산
+    const fromRect = fromSquare.getBoundingClientRect();
+    const toRect = toSquare.getBoundingClientRect();
+
+    // 애니메이션 기물 생성
+    const animatingPiece = document.createElement('span');
+    animatingPiece.className = 'chess-piece piece-animating';
+    animatingPiece.textContent = PIECES[piece];
+    animatingPiece.style.left = fromRect.left + 'px';
+    animatingPiece.style.top = fromRect.top + 'px';
+    animatingPiece.style.width = fromRect.width + 'px';
+    animatingPiece.style.height = fromRect.height + 'px';
+    animatingPiece.style.fontSize = window.getComputedStyle(pieceElement).fontSize;
+    animatingPiece.style.display = 'flex';
+    animatingPiece.style.alignItems = 'center';
+    animatingPiece.style.justifyContent = 'center';
+    document.body.appendChild(animatingPiece);
+
+    // 원래 기물 숨기기
+    pieceElement.style.visibility = 'hidden';
+
+    // 잡히는 기물 애니메이션
+    if (capturedPiece) {
+      const capturedElement = toSquare.querySelector('.chess-piece');
+      if (capturedElement) {
+        capturedElement.style.animation = `pieceCaptured ${this.animationDuration * 0.8}ms ease-out forwards`;
+      }
+    }
+
+    // 애니메이션 적용
+    requestAnimationFrame(() => {
+      animatingPiece.style.transition = `all ${this.animationDuration}ms ease-in-out`;
+      animatingPiece.style.left = toRect.left + 'px';
+      animatingPiece.style.top = toRect.top + 'px';
+      animatingPiece.style.animation = `pieceMove ${this.animationDuration}ms ease-in-out`;
+    });
+
+    // 완료 후 처리
+    setTimeout(() => {
+      animatingPiece.remove();
+      this.game.applyMove(moveData);
+      this.render();
+
+      // 착지 애니메이션
+      const landedSquare = this.getSquareElement(toRow, toCol);
+      const landedPiece = landedSquare.querySelector('.chess-piece');
+      if (landedPiece) {
+        landedPiece.style.animation = `pieceLand 200ms ease-out`;
+        setTimeout(() => {
+          landedPiece.style.animation = '';
+        }, 200);
+      }
+
+      this.isAnimating = false;
+    }, this.animationDuration);
   }
 
   cleanup() {

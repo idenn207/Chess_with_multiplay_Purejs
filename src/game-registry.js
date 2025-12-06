@@ -45,7 +45,7 @@ const gameRegistry = new GameRegistry();
 gameRegistry.register({
   id: 'chess',
   name: '체스',
-  icon: '♔',
+  icon: '&#x2654',
   gameClass: ChessGame,
   rendererClass: ChessRenderer,
   serverColor: 'white',
@@ -59,7 +59,7 @@ gameRegistry.register({
 gameRegistry.register({
   id: 'gomoku',
   name: '오목',
-  icon: '⚫',
+  icon: '&#x26AB',
   gameClass: GomokuGame,
   rendererClass: GomokuRenderer,
   serverColor: 'black',
@@ -68,3 +68,18 @@ gameRegistry.register({
   clientLabel: '백 (후공)',
   getTurnLabel: (color) => (color === 'black' ? '흑' : '백'),
 });
+
+// 장기 등록
+gameRegistry.register({
+  id: 'janggi',
+  name: '장기',
+  icon: '&#x1F3EF',
+  gameClass: JanggiGame,
+  rendererClass: JanggiRenderer,
+  serverColor: 'cho',
+  clientColor: 'han',
+  serverLabel: '초 (선공)',
+  clientLabel: '한 (후공)',
+  getTurnLabel: (color) => (color === 'cho' ? '초' : '한'),
+});
+

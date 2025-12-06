@@ -5,6 +5,8 @@ class GomokuRenderer {
     this.container = container;
     this.onMove = onMove;
     this.boardElement = null;
+    this.isAnimating = false;
+    this.animationDuration = 300; // 돌 놓기 애니메이션 시간 (ms)
   }
 
   initialize() {
@@ -59,6 +61,9 @@ class GomokuRenderer {
   }
 
   handleCellClick(row, col) {
+    // 애니메이션 중이면 클릭 무시
+    if (this.isAnimating) return;
+
     if (this.game.currentTurn !== this.game.myColor || this.game.gameOver) {
       return;
     }
@@ -67,7 +72,39 @@ class GomokuRenderer {
       return;
     }
 
-    this.executeMove(row, col);
+    // 애니메이션과 함께 돌 놓기
+    this.animatePlaceStone(row, col);
+  }
+
+  /**
+   * 돌 놓기 애니메이션
+   * @param {number} row - 행
+   * @param {number} col - 열
+   */
+  animatePlaceStone(row, col) {
+    this.isAnimating = true;
+
+    const cell = this.getCellElement(row, col);
+    const color = this.game.myColor;
+
+    // 돌 생성 (애니메이션용)
+    const stoneDiv = document.createElement('div');
+    stoneDiv.className = `gomoku-stone ${color} placing`;
+    cell.appendChild(stoneDiv);
+    cell.classList.add('has-stone');
+
+    // 애니메이션 완료 후 실제 이동 처리
+    setTimeout(() => {
+      stoneDiv.classList.remove('placing');
+      stoneDiv.classList.add('placed');
+
+      this.executeMove(row, col);
+      this.isAnimating = false;
+    }, this.animationDuration);
+  }
+
+  getCellElement(row, col) {
+    return this.boardElement.querySelector(`[data-row="${row}"][data-col="${col}"]`);
   }
 
   executeMove(row, col) {
@@ -106,9 +143,49 @@ class GomokuRenderer {
     this.render();
   }
 
+  /**
+   * 상대방 이동 반영 (애니메이션 포함)
+   */
   updateFromMove(moveData) {
+    // 마지막 이동 정보가 있으면 애니메이션 실행
+    if (moveData.lastMove) {
+      const { row, col } = moveData.lastMove;
+
+      // 현재 보드에 돌이 없으면 상대방이 놓은 것
+      if (!this.game.board[row][col]) {
+        this.animateOpponentStone(row, col, moveData);
+        return;
+      }
+    }
+
     this.game.applyMove(moveData);
     this.render();
+  }
+
+  /**
+   * 상대방 돌 놓기 애니메이션
+   */
+  animateOpponentStone(row, col, moveData) {
+    this.isAnimating = true;
+
+    const cell = this.getCellElement(row, col);
+    const opponentColor = this.game.myColor === 'black' ? 'white' : 'black';
+
+    // 돌 생성 (애니메이션용)
+    const stoneDiv = document.createElement('div');
+    stoneDiv.className = `gomoku-stone ${opponentColor} placing`;
+    cell.appendChild(stoneDiv);
+    cell.classList.add('has-stone');
+
+    // 애니메이션 완료 후 처리
+    setTimeout(() => {
+      stoneDiv.classList.remove('placing');
+      stoneDiv.classList.add('placed');
+
+      this.game.applyMove(moveData);
+      this.render();
+      this.isAnimating = false;
+    }, this.animationDuration);
   }
 
   cleanup() {
@@ -117,4 +194,3 @@ class GomokuRenderer {
     }
   }
 }
-

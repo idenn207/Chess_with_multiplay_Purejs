@@ -66,8 +66,21 @@
   background-color: rgba(255, 255, 0, 0.5) !important;
 }
 
+/* 체스 기물 스타일 */
 .chess-piece {
   pointer-events: none;
+  transition: transform 0.15s ease;
+}
+
+/* 기물 호버 효과 */
+.chess-square:hover .chess-piece {
+  transform: scale(1.05);
+}
+
+/* 선택된 기물 강조 */
+.chess-square.selected .chess-piece {
+  transform: scale(1.1);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
 }
 
 /* 체스 프로모션 모달 */
