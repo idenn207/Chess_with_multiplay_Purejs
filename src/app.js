@@ -15,6 +15,7 @@ class MultiGameApp {
     this.myTime = this.turnTimeLimit;
     this.opponentTime = this.turnTimeLimit;
     this.timerInterval = null;
+    this.movePending = false; // 이동 처리 중 플래그 (타임아웃 race condition 방지)
 
     this.elements = {
       container: document.querySelector('.container'),
@@ -166,6 +167,7 @@ class MultiGameApp {
     // 게임 초기화
     this.game = gameRegistry.createGame(gameId, 'server');
     this.renderer = gameRegistry.createRenderer(gameId, this.game, this.elements.boardContainer, (moveData) => this.handleLocalMove(moveData));
+    this.renderer.onMoveStart = () => this.handleMoveStart();
     this.renderer.initialize();
 
     // UI 업데이트
@@ -322,6 +324,7 @@ class MultiGameApp {
     this.game.applyMove(gameState);
 
     this.renderer = gameRegistry.createRenderer(gameId, this.game, this.elements.boardContainer, (moveData) => this.handleLocalMove(moveData));
+    this.renderer.onMoveStart = () => this.handleMoveStart();
     this.renderer.initialize();
 
     // UI 업데이트
@@ -348,8 +351,14 @@ class MultiGameApp {
     }, 300);
   }
 
-  handleLocalMove(moveData) {
+  // 이동 시작 시 호출 (애니메이션 시작 전)
+  handleMoveStart() {
+    this.movePending = true;
     this.stopTimer();
+  }
+
+  handleLocalMove(moveData) {
+    this.movePending = false;
     this.webrtc.send({ type: 'move', data: moveData });
     this.updateCurrentTurn();
     this.updateTurnIndicators();
@@ -460,14 +469,16 @@ class MultiGameApp {
     this.timerInterval = setInterval(() => {
       this.myTime--;
       this.updateMyTimerDisplay();
+      this.updateTurnIndicators();
 
       // 상대방에게 타이머 동기화
       this.webrtc.send({
         type: 'timerSync',
-        data: { timeRemaining: this.myTime }
+        data: { timeRemaining: this.myTime },
       });
 
-      if (this.myTime <= 0) {
+      if (this.myTime < 0) {
+        this.myTime = 0;
         this.handleTimerExpired();
       }
     }, 1000);
@@ -519,9 +530,17 @@ class MultiGameApp {
   handleTimerExpired() {
     this.stopTimer();
 
+    // 이동 처리 중이면 타임아웃 무시 (race condition 방지)
+    if (this.movePending) {
+      return;
+    }
+
     if (this.game.gameOver || this.game.currentTurn !== this.game.myColor) {
       return;
     }
+
+    // 선택 상태 초기화
+    this.clearBoardSelection();
 
     // 타임아웃 메시지 전송
     this.webrtc.send({ type: 'timeout' });
@@ -532,6 +551,19 @@ class MultiGameApp {
     this.game.currentTurn = opponentColor;
     this.updateCurrentTurn();
     this.updateTurnIndicators();
+  }
+
+  // 보드 선택 상태 초기화
+  clearBoardSelection() {
+    if (this.game.selectedSquare) {
+      this.game.selectedSquare = null;
+    }
+    if (this.game.validMoves) {
+      this.game.validMoves = [];
+    }
+    if (this.renderer && this.renderer.render) {
+      this.renderer.render();
+    }
   }
 }
 

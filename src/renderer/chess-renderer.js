@@ -25,11 +25,20 @@ class ChessRenderer {
     this.pendingPromotion = null;
     this.isAnimating = false; // 애니메이션 중 여부
     this.animationDuration = 400; // 애니메이션 시간 (ms)
+    this.onMoveStart = null; // 이동 시작 콜백 (타임아웃 race condition 방지용)
+    this.isRotated = false; // 보드 회전 여부
+    this.rotated = '';
   }
 
   initialize() {
+    // 흑 플레이어인 경우 보드 회전
+    if (this.game.myColor === 'black') {
+      this.rotated = 'rotated';
+      this.isRotated = true;
+    }
+
     this.boardElement = document.createElement('div');
-    this.boardElement.className = 'chess-board';
+    this.boardElement.className = `chess-board ${this.rotated}`;
 
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
@@ -91,7 +100,7 @@ class ChessRenderer {
       const col = parseInt(square.dataset.col);
       const piece = this.game.board[row][col];
 
-      square.innerHTML = piece ? `<span class="chess-piece">${PIECES[piece]}</span>` : '';
+      square.innerHTML = piece ? `<span class="chess-piece ${this.rotated}">${PIECES[piece]}</span>` : '';
       square.classList.remove('selected', 'valid-move', 'valid-capture', 'in-check', 'last-move');
     });
 
@@ -215,6 +224,11 @@ class ChessRenderer {
    */
   animateMove(fromRow, fromCol, toRow, toCol, promotionPiece = null) {
     this.isAnimating = true;
+
+    // 이동 시작 알림 (타이머 정지용)
+    if (this.onMoveStart) {
+      this.onMoveStart();
+    }
 
     const fromSquare = this.getSquareElement(fromRow, fromCol);
     const toSquare = this.getSquareElement(toRow, toCol);

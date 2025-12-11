@@ -7,6 +7,7 @@ class GomokuRenderer {
     this.boardElement = null;
     this.isAnimating = false;
     this.animationDuration = 300; // 돌 놓기 애니메이션 시간 (ms)
+    this.onMoveStart = null; // 이동 시작 콜백 (타임아웃 race condition 방지용)
   }
 
   initialize() {
@@ -40,7 +41,7 @@ class GomokuRenderer {
       const stone = this.game.board[row][col];
 
       cell.innerHTML = '';
-      cell.classList.remove('has-stone', 'last-move');
+      cell.classList.remove('has-stone', 'last-move', 'forbidden');
 
       if (stone) {
         const stoneDiv = document.createElement('div');
@@ -52,12 +53,40 @@ class GomokuRenderer {
 
         cell.appendChild(stoneDiv);
         cell.classList.add('has-stone');
+      } else if (!this.game.gameOver && this.game.currentTurn === 'black' && this.game.myColor === 'black') {
+        // 흑의 턴이고, 내가 흑인 경우 금지 위치 표시
+        if (this.isForbiddenPosition(row, col)) {
+          const forbiddenMark = document.createElement('div');
+          forbiddenMark.className = 'forbidden-mark';
+          forbiddenMark.textContent = '✕';
+          cell.appendChild(forbiddenMark);
+          cell.classList.add('forbidden');
+        }
       }
 
       if (this.game.lastMove && this.game.lastMove.row === row && this.game.lastMove.col === col) {
         cell.classList.add('last-move');
       }
     });
+  }
+
+  /**
+   * 금지 위치 확인 (삼삼 또는 장육)
+   */
+  isForbiddenPosition(row, col) {
+    if (this.game.board[row][col] !== null) return false;
+
+    // 삼삼 체크
+    if (this.game.isDoubleThree(row, col, 'black')) {
+      return true;
+    }
+
+    // 장육 체크
+    if (this.game.isOverline(row, col, 'black')) {
+      return true;
+    }
+
+    return false;
   }
 
   handleCellClick(row, col) {
@@ -83,6 +112,11 @@ class GomokuRenderer {
    */
   animatePlaceStone(row, col) {
     this.isAnimating = true;
+
+    // 이동 시작 알림 (타이머 정지용)
+    if (this.onMoveStart) {
+      this.onMoveStart();
+    }
 
     const cell = this.getCellElement(row, col);
     const color = this.game.myColor;

@@ -27,6 +27,9 @@ class JanggiRenderer {
     this.boardElement = null;
     this.isAnimating = false;
     this.animationDuration = 400; // 애니메이션 시간 (ms)
+    this.onMoveStart = null; // 이동 시작 콜백 (타임아웃 race condition 방지용)
+    this.isRotated = false; // 보드 회전 여부
+    this.rotated = '';
   }
 
   initialize() {
@@ -59,6 +62,14 @@ class JanggiRenderer {
 
     this.container.innerHTML = '';
     this.container.appendChild(this.boardElement);
+
+    // 한 플레이어인 경우 보드 회전
+    if (this.game.myColor === 'han') {
+      this.rotated = 'rotated';
+      this.isRotated = true;
+      this.boardElement.classList.add(this.rotated);
+    }
+
     this.render();
   }
 
@@ -85,7 +96,7 @@ class JanggiRenderer {
       if (piece) {
         const pieceDiv = document.createElement('div');
         const isChoPiece = piece === piece.toUpperCase();
-        pieceDiv.className = `janggi-piece ${isChoPiece ? 'cho' : 'han'}`;
+        pieceDiv.className = `janggi-piece ${isChoPiece ? 'cho' : 'han'} ${this.rotated}`;
 
         // 궁은 특별 스타일
         if (piece.toLowerCase() === 'k') {
@@ -190,6 +201,11 @@ class JanggiRenderer {
   animateMove(fromRow, fromCol, toRow, toCol) {
     this.isAnimating = true;
 
+    // 이동 시작 알림 (타이머 정지용)
+    if (this.onMoveStart) {
+      this.onMoveStart();
+    }
+
     const fromCell = this.getCellElement(fromRow, fromCol);
     const toCell = this.getCellElement(toRow, toCol);
     const piece = this.game.board[fromRow][fromCol];
@@ -210,6 +226,7 @@ class JanggiRenderer {
     // 기물 복제하여 애니메이션
     const animatingPiece = pieceElement.cloneNode(true);
     animatingPiece.classList.add('piece-animating');
+    if (this.rotated) animatingPiece.classList.remove(this.rotated);
     animatingPiece.style.left = fromRect.left + 'px';
     animatingPiece.style.top = fromRect.top + 'px';
     animatingPiece.style.width = fromRect.width + 'px';
@@ -361,6 +378,7 @@ class JanggiRenderer {
     // 애니메이션 기물 생성
     const animatingPiece = pieceElement.cloneNode(true);
     animatingPiece.classList.add('piece-animating');
+    if (this.rotated) animatingPiece.classList.remove(this.rotated);
     animatingPiece.style.left = fromRect.left + 'px';
     animatingPiece.style.top = fromRect.top + 'px';
     animatingPiece.style.width = fromRect.width + 'px';

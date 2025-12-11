@@ -22,6 +22,10 @@ body {
   width: 100%;
 }
 
+.rotated {
+  rotate: 180deg;
+}
+
 h1,
 h2,
 h3 {
@@ -932,3 +936,4 @@ h3 {
     letter-spacing: 3px;
   }
 }
+
