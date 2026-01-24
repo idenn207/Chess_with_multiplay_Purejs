@@ -1,0 +1,223 @@
+/* 오목 보드 */
+.gomoku-board {
+  display: grid;
+  grid-template-columns: repeat(15, 40px);
+  grid-template-rows: repeat(15, 40px);
+  gap: 0;
+  background: #dcb35c;
+  border: 3px solid #8b6914;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  position: relative;
+}
+
+/* 격자선 셀 중앙을 지나가도록 */
+.gomoku-board::before {
+  content: '';
+  position: absolute;
+  top: 20px; /* 첫 번째 행 셀의 중앙 */
+  left: 20px; /* 첫 번째 열 셀의 중앙 */
+  right: 20px; /* 마지막 열 셀의 중앙 */
+  bottom: 20px; /* 마지막 행 셀의 중앙 */
+  background: 
+    /* 세로선 (14개 내부선) */ repeating-linear-gradient(90deg, transparent 0px, transparent 38px, #8b6914 38px, #8b6914 40px),
+    /* 가로선 (14개 내부선) */ repeating-linear-gradient(0deg, transparent 0px, transparent 38px, #8b6914 38px, #8b6914 40px);
+  border: 2px solid #8b6914;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.gomoku-cell {
+  width: 40px;
+  height: 40px;
+  /* border: 1px solid #8b6914; */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  z-index: 2;
+}
+
+.gomoku-cell:hover:not(.has-stone) {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.gomoku-cell.has-stone {
+  cursor: default;
+}
+
+.gomoku-cell.last-move {
+  background-color: rgba(255, 0, 0, 0.3);
+}
+
+/* 오목 돌 기본 스타일 */
+.gomoku-stone {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  transition: transform 0.15s ease;
+}
+
+.gomoku-stone.black {
+  background: radial-gradient(circle at 30% 30%, #555, #000);
+}
+
+.gomoku-stone.white {
+  background: radial-gradient(circle at 30% 30%, #fff, #ddd);
+}
+
+/* 돌 놓기 애니메이션 */
+.gomoku-stone.placing {
+  animation: stoneDrop 300ms ease-out forwards;
+}
+
+@keyframes stoneDrop {
+  0% {
+    transform: translateY(-50px) scale(0.5);
+    opacity: 0;
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+  50% {
+    transform: translateY(5px) scale(1.15);
+    opacity: 1;
+    box-shadow: 4px 8px 12px rgba(0, 0, 0, 0.4);
+  }
+  70% {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 3px 6px 8px rgba(0, 0, 0, 0.35);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* 돌 착지 효과 */
+.gomoku-stone.placed {
+  animation: stoneLand 150ms ease-out;
+}
+
+@keyframes stoneLand {
+  0% {
+    transform: scale(1.05);
+  }
+  50% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 승리 돌 애니메이션 */
+.gomoku-stone.winning {
+  animation: gomoku-winning 0.5s ease-in-out 3;
+  box-shadow: 0 0 15px 5px rgba(255, 215, 0, 0.7);
+}
+
+@keyframes gomoku-winning {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 15px 5px rgba(255, 215, 0, 0.7);
+  }
+  50% {
+    transform: scale(1.2);
+    box-shadow: 0 0 25px 10px rgba(255, 215, 0, 0.9);
+  }
+}
+
+/* 호버 시 미리보기 (돌 놓기 전) */
+.gomoku-cell:hover:not(.has-stone):not(.forbidden)::before {
+  content: '';
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  position: absolute;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* 금지 위치 표시 (삼삼, 장육) */
+.forbidden-mark {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #cc0000;
+  opacity: 0.7;
+  pointer-events: none;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
+}
+
+.gomoku-cell.forbidden {
+  cursor: not-allowed;
+}
+
+.gomoku-cell.forbidden:hover {
+  background: rgba(255, 0, 0, 0.15);
+}
+
+/* 반응형 오목 보드 */
+@media (max-width: 768px) {
+  .gomoku-board {
+    grid-template-columns: repeat(15, 30px);
+    grid-template-rows: repeat(15, 30px);
+  }
+
+  .gomoku-board::before {
+    top: 15px;
+    left: 15px;
+    right: 15px;
+    bottom: 15px;
+    background: repeating-linear-gradient(90deg, transparent 0px, transparent 28px, #8b6914 28px, #8b6914 30px),
+      repeating-linear-gradient(0deg, transparent 0px, transparent 28px, #8b6914 28px, #8b6914 30px);
+  }
+
+  .gomoku-cell {
+    width: 30px;
+    height: 30px;
+  }
+
+  .gomoku-stone {
+    width: 26px;
+    height: 26px;
+  }
+
+  .gomoku-cell:hover:not(.has-stone):not(.forbidden)::before {
+    width: 26px;
+    height: 26px;
+  }
+
+  .forbidden-mark {
+    width: 18px;
+    height: 18px;
+    font-size: 14px;
+  }
+
+  @keyframes stoneDrop {
+    0% {
+      transform: translateY(-40px) scale(0.5);
+      opacity: 0;
+    }
+    50% {
+      transform: translateY(4px) scale(1.15);
+      opacity: 1;
+    }
+    70% {
+      transform: translateY(-2px) scale(1.05);
+    }
+    100% {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+  }
+}
+

@@ -1,0 +1,1113 @@
+/* 공통 스타일 */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)),
+    repeating-linear-gradient(90deg, #2a2620 0px, #2a2620 2px, #332e28 2px, #332e28 4px, #3d3630 4px, #3d3630 8px),
+    repeating-linear-gradient(0deg, #2a2620 0px, #2a2620 20px, #332e28 20px, #332e28 40px, #3d3630 40px, #3d3630 60px);
+  background-size: 100% 100%;
+  filter: grayscale(0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* 테트리스 모드 배경 */
+body.tetris-mode {
+  background:
+    radial-gradient(ellipse at top, rgba(102, 126, 234, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse at bottom, rgba(118, 75, 162, 0.15) 0%, transparent 60%),
+    linear-gradient(135deg, #0f0c29 0%, #1a1a2e 50%, #16213e 100%);
+  background-attachment: fixed;
+  filter: none;
+  padding: 0;
+  overflow: hidden;
+  height: 100vh;
+  min-height: 100vh;
+  max-height: 100vh;
+}
+
+/* 테트리스 모드 애니메이션 배경 효과 */
+body.tetris-mode::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    repeating-linear-gradient(90deg,
+      transparent,
+      transparent 50px,
+      rgba(102, 126, 234, 0.1) 50px,
+      rgba(102, 126, 234, 0.1) 51px),
+    repeating-linear-gradient(0deg,
+      transparent,
+      transparent 50px,
+      rgba(118, 75, 162, 0.1) 50px,
+      rgba(118, 75, 162, 0.1) 51px);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* 테트리스 모드 장식 효과 - 빛나는 원 */
+body.tetris-mode::after {
+  content: '';
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  height: 80%;
+  background: radial-gradient(circle, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 5;
+  animation: pulse 4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+}
+
+.container {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  padding: 30px;
+  max-width: 900px;
+  width: 100%;
+}
+
+.rotated {
+  rotate: 180deg;
+}
+
+h1,
+h2,
+h3 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+h1 {
+  font-size: 2.5em;
+}
+
+h2 {
+  font-size: 1.8em;
+}
+
+h3 {
+  font-size: 1.3em;
+}
+
+/* ========================================
+   기물 이동 애니메이션 공통 스타일
+   ======================================== */
+
+/* 애니메이션 중인 기물 */
+.piece-animating {
+  position: fixed !important;
+  z-index: 10000;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* 기물 이동 애니메이션 키프레임 */
+@keyframes pieceMove {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  }
+  25% {
+    transform: scale(1.2);
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+  }
+  50% {
+    transform: scale(1.3);
+    filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.4));
+  }
+  75% {
+    transform: scale(1.2);
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  }
+}
+
+/* 잡힌 기물 사라지는 애니메이션 */
+@keyframes pieceCaptured {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2) rotate(10deg);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(0) rotate(45deg);
+    opacity: 0;
+  }
+}
+
+/* 기물 착지 애니메이션 */
+@keyframes pieceLand {
+  0% {
+    transform: scale(1.1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ======================================== */
+
+/* 역할 선택 */
+.role-selection {
+  background: #f8f9fa;
+  padding: 30px;
+  border-radius: 15px;
+  display: none;
+}
+
+.role-selection.active {
+  display: block;
+}
+
+.role-buttons {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.role-btn {
+  flex: 1;
+  padding: 30px 20px;
+  border: 3px solid #667eea;
+  background: white;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.role-btn .icon {
+  font-size: 3em;
+}
+
+.role-btn .title {
+  font-size: 1.5em;
+  font-weight: 600;
+  color: #667eea;
+}
+
+.role-btn .desc {
+  font-size: 0.9em;
+  color: #666;
+}
+
+.role-btn:hover {
+  background: #667eea;
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.role-btn:hover .title {
+  color: white;
+}
+
+.role-btn:hover .desc {
+  color: #e8e8e8;
+}
+
+/* 게임 선택 */
+.game-selection {
+  background: #f8f9fa;
+  padding: 30px;
+  border-radius: 15px;
+  display: none;
+}
+
+.game-selection.active {
+  display: block;
+}
+
+.game-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.game-btn {
+  padding: 25px 20px;
+  border: 3px solid #667eea;
+  background: white;
+  color: #667eea;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-size: 1em;
+  font-weight: 600;
+}
+
+.game-btn .icon {
+  font-size: 2.5em;
+}
+
+.game-btn:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.game-btn.selected {
+  background: #667eea;
+  color: white;
+  border-color: #5568d3;
+}
+
+/* 연결 패널 */
+.connection-panel {
+  background: #f8f9fa;
+  padding: 25px;
+  border-radius: 15px;
+  display: none;
+}
+
+.connection-panel.active {
+  display: block;
+}
+
+.instruction {
+  background: #e6f7ff;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 0.95em;
+  color: #555;
+  line-height: 1.6;
+}
+
+.input-group {
+  margin-bottom: 15px;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #555;
+  font-weight: 600;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 1em;
+  font-family: monospace;
+}
+
+.input-group input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+/* 버튼 스타일 */
+.action-btn {
+  padding: 12px 24px;
+  font-size: 1em;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.action-btn.primary {
+  background: #48bb78;
+  color: white;
+}
+
+.action-btn.primary:hover {
+  background: #38a169;
+  transform: translateY(-2px);
+}
+
+.action-btn.danger {
+  background: #f56565;
+  color: white;
+}
+
+.action-btn.danger:hover:not(:disabled) {
+  background: #e53e3e;
+  transform: translateY(-2px);
+}
+
+.action-btn.secondary {
+  background: #667eea;
+  color: white;
+}
+
+.action-btn.secondary:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.action-btn.full-width {
+  width: 100%;
+}
+
+/* 서버 정보 */
+.server-info {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  display: none;
+}
+
+.server-info.active {
+  display: block;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  background: white;
+  border-radius: 5px;
+  margin-bottom: 10px;
+}
+
+.info-row strong {
+  color: #555;
+}
+
+.info-row span {
+  color: #333;
+  font-family: monospace;
+}
+
+.status-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.status-indicator.waiting {
+  background: #ed8936;
+}
+
+.status-indicator.ready {
+  background: #48bb78;
+}
+
+/* 게임 영역 */
+#gameArea {
+  display: none;
+}
+
+#gameArea.active {
+  display: block;
+}
+
+.game-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f5f5f5;
+  border-radius: 10px;
+  transition: all 0.5s ease-in-out;
+}
+
+.info-item {
+  font-size: 1.1em;
+  color: #555;
+}
+
+.info-item strong {
+  color: #333;
+}
+
+/* 게임 집중 모드에서 게임 정보 숨기기 */
+.container.game-focused .game-info {
+  display: none;
+}
+
+/* 게임 보드 래퍼 (턴 표시기 포함) */
+.game-board-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0;
+  min-height: 400px;
+}
+
+/* 보드 컨테이너 */
+#boardContainer {
+  min-height: 400px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+/* 턴 표시기 */
+.turn-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  opacity: 0.3;
+  transition: all 0.4s ease;
+  pointer-events: none;
+}
+
+.turn-indicator.left {
+  left: -150px;
+  background: linear-gradient(to right, rgba(102, 126, 234, 0.6) 0%, rgba(102, 126, 234, 0.4) 50%, rgba(102, 126, 234, 0) 100%);
+}
+
+.turn-indicator.right {
+  right: -150px;
+  background: linear-gradient(to left, rgba(245, 101, 101, 0.6) 0%, rgba(245, 101, 101, 0.4) 50%, rgba(245, 101, 101, 0) 100%);
+}
+
+.turn-indicator.active {
+  opacity: 1;
+  animation: turnGlow 2s ease-in-out infinite;
+}
+
+.turn-label {
+  font-size: 1.5em;
+  font-weight: 700;
+  color: white;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+  letter-spacing: 3px;
+  transform: rotate(-90deg);
+  white-space: nowrap;
+}
+
+/* 타이머 바 래퍼 */
+.timer-bar-wrapper {
+  width: 30px;
+  height: 200px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 15px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+}
+
+/* 타이머 바 (하단에서 상단으로 채워짐) */
+.timer-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to top, rgba(72, 187, 120, 0.9) 0%, rgba(72, 187, 120, 0.7) 100%);
+  transition: height 1s linear, background 0.3s ease;
+}
+
+.turn-indicator.left .timer-bar {
+  background: linear-gradient(to top, rgba(102, 126, 234, 0.9) 0%, rgba(102, 126, 234, 0.7) 100%);
+}
+
+.turn-indicator.right .timer-bar {
+  background: linear-gradient(to top, rgba(245, 101, 101, 0.9) 0%, rgba(245, 101, 101, 0.7) 100%);
+}
+
+/* 타이머 바 경고 상태 */
+.timer-bar.warning {
+  background: linear-gradient(to top, rgba(237, 137, 54, 0.9) 0%, rgba(237, 137, 54, 0.7) 100%);
+}
+
+.timer-bar.danger {
+  background: linear-gradient(to top, rgba(245, 101, 101, 0.9) 0%, rgba(245, 101, 101, 0.7) 100%);
+  animation: timerBarPulse 0.5s ease-in-out infinite;
+}
+
+@keyframes timerBarPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* 타이머 텍스트 */
+.timer-text {
+  font-size: 1.8em;
+  font-weight: 900;
+  color: white;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+  min-width: 40px;
+  text-align: center;
+}
+
+@keyframes turnGlow {
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 게임 상태 오버레이 */
+.game-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(5px);
+}
+
+.game-overlay.active {
+  display: flex;
+  animation: overlayFadeIn 0.5s ease-out;
+}
+
+.overlay-content {
+  text-align: center;
+  animation: overlaySlideUp 0.6s ease-out;
+}
+
+.overlay-message {
+  font-size: 5em;
+  font-weight: 900;
+  color: white;
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.5), 0 0 60px rgba(102, 126, 234, 0.8);
+  letter-spacing: 5px;
+  animation: overlayPulse 2s ease-in-out infinite;
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes overlaySlideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes overlayPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* 버튼 그룹 */
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.button-group button {
+  flex: 1;
+}
+
+/* Signaling 모달 */
+.signaling-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.signaling-modal.active {
+  display: flex;
+}
+
+.signaling-content {
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.signaling-content h2 {
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.signaling-content p {
+  margin-bottom: 20px;
+  color: #666;
+}
+
+/* 단계 표시 */
+.signaling-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 25px;
+}
+
+.signaling-steps .step {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.signaling-steps .step.active {
+  background: #667eea;
+  color: white;
+}
+
+.signaling-steps .step.completed {
+  background: #48bb78;
+  color: white;
+}
+
+.signaling-steps .step-line {
+  width: 60px;
+  height: 3px;
+  background: #e0e0e0;
+  margin: 0 10px;
+}
+
+/* 섹션 */
+.signaling-section {
+  margin-bottom: 20px;
+}
+
+.signaling-section label {
+  display: block;
+  margin-bottom: 8px;
+  color: #555;
+  font-weight: 600;
+}
+
+.signaling-section textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.85em;
+  font-family: monospace;
+  resize: vertical;
+  margin-bottom: 10px;
+}
+
+.signaling-section textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.signaling-section textarea[readonly] {
+  background: #f8f9fa;
+  cursor: text;
+}
+
+/* 상태 메시지 */
+.signaling-status {
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.signaling-status.info {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+.signaling-status.success {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.signaling-status.warning {
+  background: #fffbe6;
+  color: #faad14;
+}
+
+.signaling-status.error {
+  background: #fff2f0;
+  color: #ff4d4f;
+}
+
+.copy-status {
+  text-align: center;
+  margin-top: 5px;
+  font-size: 0.9em;
+  color: #52c41a;
+}
+
+/* 게임 집중 모드 */
+.container.game-focused {
+  max-width: 1000px;
+  transition: all 0.5s ease-in-out;
+}
+
+.container.game-focused #pageTitle {
+  font-size: 1.5em;
+  margin-bottom: 10px;
+  transition: all 0.4s ease-in-out;
+}
+
+/* 비게임 요소 숨기기 */
+.container.game-focused .server-info {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  transition: all 0.5s ease-in-out;
+}
+
+.container.game-focused .connection-panel {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  transition: all 0.5s ease-in-out;
+}
+
+/* 게임 영역 강조 */
+.container.game-focused #gameArea {
+  animation: gameAreaGlow 0.8s ease-in-out;
+}
+
+@keyframes gameAreaGlow {
+  0% {
+    transform: scale(0.98);
+    opacity: 0.8;
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(102, 126, 234, 0.3);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 게임 정보 강조 */
+.container.game-focused .game-info {
+  background: linear-gradient(135deg, #667eea15, #764ba215);
+  border: 2px solid #667eea40;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15);
+  transition: all 0.5s ease-in-out;
+  animation: slideDown 0.5s ease-out;
+}
+
+@keyframes slideDown {
+  0% {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 테트리스 모드에서 턴 기반 UI 요소 숨기기 */
+.container.tetris-active .turn-indicator {
+  display: none !important;
+}
+
+.container.tetris-active .timer-bar {
+  display: none !important;
+}
+
+.container.tetris-active .game-info {
+  display: none !important;
+}
+
+.container.tetris-active #resignBtn {
+  display: none !important;
+}
+
+.container.tetris-active .button-group {
+  display: none !important;
+}
+
+/* 테트리스 모드에서 game-board-wrapper 풀스크린 */
+.container.tetris-active .game-board-wrapper {
+  min-height: 100vh !important;
+  height: 100vh !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 테트리스 모드에서 boardContainer 풀스크린 */
+.container.tetris-active #boardContainer {
+  min-height: 100vh !important;
+  height: 100% !important;
+  width: 100% !important;
+}
+
+/* 테트리스 풀스크린 모드 */
+.container.tetris-fullscreen {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  max-width: 100% !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  max-height: 100vh !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  z-index: 20;
+}
+
+/* 테트리스 모드에서 불필요한 UI 요소 숨기기 */
+.container.tetris-fullscreen > *:not(#gameArea) {
+  display: none !important;
+}
+
+/* 테트리스 모드에서 gameArea를 풀스크린으로 */
+.container.tetris-fullscreen #gameArea {
+  width: 100%;
+  height: 100vh;
+  max-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* 테트리스 모드에서 boardContainer */
+.container.tetris-fullscreen #boardContainer {
+  width: 100%;
+  height: 100%;
+  max-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* 테트리스 모드에서 game-focused 스타일 재정의 */
+.container.tetris-fullscreen.game-focused {
+  max-width: 100% !important;
+  padding: 0 !important;
+}
+
+/* 보드 컨테이너 강조 */
+.container.game-focused #boardContainer {
+  animation: boardFadeIn 0.6s ease-in-out;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* 테트리스 모드에서는 배경 제거 */
+.container.tetris-active.game-focused #boardContainer {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+@keyframes boardFadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 턴 표시기 강조 */
+.container.game-focused .turn-indicator.active {
+  animation: turnIndicatorGlow 2s ease-in-out infinite;
+}
+
+@keyframes turnIndicatorGlow {
+  0%,
+  100% {
+    opacity: 0.8;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.2);
+  }
+}
+
+/* 버튼 강조 */
+.container.game-focused .button-group button {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease-in-out;
+}
+
+.container.game-focused .button-group button:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  transform: translateY(-3px);
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .container {
+    padding: 20px;
+  }
+
+  h1 {
+    font-size: 2em;
+  }
+
+  .role-buttons {
+    flex-direction: column;
+  }
+
+  .game-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .game-info {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .container.game-focused #pageTitle {
+    font-size: 1.3em;
+  }
+
+  /* 턴 표시기 반응형 */
+  .turn-indicator {
+    width: 80px;
+    gap: 10px;
+  }
+
+  .turn-indicator.left {
+    left: -80px;
+  }
+
+  .turn-indicator.right {
+    right: -80px;
+  }
+
+  .turn-label {
+    font-size: 1em;
+    letter-spacing: 2px;
+  }
+
+  /* 타이머 바 반응형 */
+  .timer-bar-wrapper {
+    width: 20px;
+    height: 150px;
+  }
+
+  .timer-text {
+    font-size: 1.3em;
+  }
+
+  /* 오버레이 메시지 반응형 */
+  .overlay-message {
+    font-size: 3em;
+    letter-spacing: 3px;
+  }
+}
+

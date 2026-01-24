@@ -1,0 +1,790 @@
+/**
+ * 테트리스 렌더러
+ * - Canvas 기반 렌더링
+ * - 실시간 게임 루프
+ * - 키보드 입력 처리
+ * - 두 플레이어 보드 표시
+ */
+
+class TetrisRenderer {
+  constructor(game, container, onMove) {
+    this.game = game;
+    this.container = container;
+    this.onMove = onMove;
+    this.onMoveStart = null;
+    
+    // 캔버스
+    this.myCanvas = null;
+    this.myCtx = null;
+    this.opponentCanvas = null;
+    this.opponentCtx = null;
+    
+    // UI 요소
+    this.wrapper = null;
+    this.myPanel = null;
+    this.opponentPanel = null;
+    this.startModal = null;
+    
+    // 게임 루프
+    this.animationId = null;
+    this.lastTime = 0;
+    this.dropAccumulator = 0;
+    this.isRunning = false;
+    
+    // DAS/ARR (지연 자동 반복)
+    this.das = 133; // ms
+    this.arr = 10;  // ms
+    this.keyState = {};
+    this.keyTimers = {};
+    
+    // 렌더링 설정
+    this.cellSize = 28;
+    this.miniCellSize = 18;
+    
+    // 상태 동기화 간격
+    this.syncInterval = null;
+    this.lastSyncTime = 0;
+    this.syncRate = 500; // ms
+
+    // 준비 상태
+    this.isReady = false;
+    this.opponentReady = false;
+    this.gameStarted = false;
+
+    // 바운드 메서드
+    this.handleKeyDown = this.handleKeyDown.bind(this);
+    this.handleKeyUp = this.handleKeyUp.bind(this);
+    this.gameLoop = this.gameLoop.bind(this);
+  }
+  
+  initialize() {
+    console.log('[Tetris] initialize called');
+    this.createUI();
+    this.setupEventListeners();
+    this.render();
+
+    // 턴 기반 UI 요소 숨기기 및 풀스크린 모드 활성화
+    document.querySelector('.container').classList.add('tetris-active');
+    document.querySelector('.container').classList.add('tetris-fullscreen');
+    document.body.classList.add('tetris-mode');
+
+    console.log('[Tetris] Fullscreen mode activated');
+    // 준비 모달은 WebRTC 연결 완료 후에 표시됨
+  }
+  
+  createUI() {
+    console.log('[Tetris] createUI called');
+    this.wrapper = document.createElement('div');
+    this.wrapper.className = 'tetris-wrapper';
+    
+    // 내 게임 패널
+    this.myPanel = document.createElement('div');
+    this.myPanel.className = 'tetris-panel my-panel';
+    this.myPanel.innerHTML = `
+      <div class="tetris-header">
+        <span class="player-label">ME</span>
+      </div>
+      <div class="tetris-main">
+        <div class="tetris-side left">
+          <div class="tetris-hold">
+            <div class="side-label">HOLD</div>
+            <canvas class="hold-canvas" width="100" height="80"></canvas>
+          </div>
+        </div>
+        <canvas class="tetris-board-canvas"></canvas>
+        <div class="tetris-side right">
+          <div class="tetris-next">
+            <div class="side-label">NEXT</div>
+            <canvas class="next-canvas" width="100" height="320"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="tetris-stats">
+        <div class="stat"><span class="stat-label">SCORE</span><span class="stat-value my-score">0</span></div>
+        <div class="stat"><span class="stat-label">LEVEL</span><span class="stat-value my-level">1</span></div>
+        <div class="stat"><span class="stat-label">LINES</span><span class="stat-value my-lines">0</span></div>
+      </div>
+      <div class="tetris-garbage">
+        <div class="garbage-label">INCOMING GARBAGE</div>
+        <div class="garbage-bar"><div class="garbage-fill my-garbage"></div></div>
+      </div>
+    `;
+    
+    // 상대방 패널
+    this.opponentPanel = document.createElement('div');
+    this.opponentPanel.className = 'tetris-panel opponent-panel';
+    this.opponentPanel.innerHTML = `
+      <div class="tetris-header">
+        <span class="player-label">OPPONENT</span>
+      </div>
+      <div class="tetris-main mini">
+        <canvas class="tetris-board-canvas mini"></canvas>
+      </div>
+      <div class="tetris-stats">
+        <div class="stat"><span class="stat-label">SCORE</span><span class="stat-value opp-score">0</span></div>
+        <div class="stat"><span class="stat-label">LEVEL</span><span class="stat-value opp-level">1</span></div>
+        <div class="stat"><span class="stat-label">LINES</span><span class="stat-value opp-lines">0</span></div>
+      </div>
+    `;
+    
+    this.wrapper.appendChild(this.myPanel);
+    this.wrapper.appendChild(this.opponentPanel);
+    
+    this.container.innerHTML = '';
+    this.container.appendChild(this.wrapper);
+    
+    // 캔버스 설정
+    this.myCanvas = this.myPanel.querySelector('.tetris-board-canvas');
+    this.myCanvas.width = TETRIS_BOARD_WIDTH * this.cellSize;
+    this.myCanvas.height = TETRIS_BOARD_HEIGHT * this.cellSize;
+    this.myCtx = this.myCanvas.getContext('2d');
+    
+    this.opponentCanvas = this.opponentPanel.querySelector('.tetris-board-canvas');
+    this.opponentCanvas.width = TETRIS_BOARD_WIDTH * this.miniCellSize;
+    this.opponentCanvas.height = TETRIS_BOARD_HEIGHT * this.miniCellSize;
+    this.opponentCtx = this.opponentCanvas.getContext('2d');
+    
+    this.holdCanvas = this.myPanel.querySelector('.hold-canvas');
+    this.holdCtx = this.holdCanvas.getContext('2d');
+
+    this.nextCanvas = this.myPanel.querySelector('.next-canvas');
+    this.nextCtx = this.nextCanvas.getContext('2d');
+
+    // 가비지 바 초기화
+    const garbageFill = this.myPanel.querySelector('.my-garbage');
+    if (garbageFill) {
+      garbageFill.style.width = '0%';
+    }
+
+    // 시작 모달 생성
+    this.createStartModal();
+  }
+  
+  createStartModal() {
+    console.log('[Tetris] createStartModal called, existing modal:', !!this.startModal);
+    // 이미 모달이 있으면 재생성하지 않음
+    if (this.startModal) {
+      console.log('[Tetris] Modal already exists, skipping creation');
+      return;
+    }
+
+    console.log('[Tetris] Creating new modal');
+    this.startModal = document.createElement('div');
+    this.startModal.className = 'tetris-start-modal';
+    this.startModal.innerHTML = `
+      <div class="start-content">
+        <h2>🎮 TETRIS</h2>
+        <p class="start-message">조작법을 확인하고 준비 버튼을 누르세요</p>
+        <div class="ready-status">
+          <span class="ready-indicator">나: <span id="myReadyStatus">❌</span></span>
+          <span class="ready-indicator">상대: <span id="opponentReadyStatus">❌</span></span>
+        </div>
+        <button class="ready-btn">준비완료</button>
+        <div class="controls-info">
+          <div class="control-row"><span class="key">←→</span> 이동</div>
+          <div class="control-row"><span class="key">↑</span> 시계방향 회전</div>
+          <div class="control-row"><span class="key">Z</span> 반시계방향 회전</div>
+          <div class="control-row"><span class="key">↓</span> 소프트 드롭</div>
+          <div class="control-row"><span class="key">Space</span> 하드 드롭</div>
+          <div class="control-row"><span class="key">C</span> 홀드</div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(this.startModal);
+
+    this.startModal.querySelector('.ready-btn').addEventListener('click', () => {
+      this.handleReadyClick();
+    });
+  }
+  
+  showStartButton() {
+    this.showStartModal();
+  }
+
+  showWaitingMessage() {
+    this.showStartModal();
+  }
+
+  onConnectionEstablished() {
+    // WebRTC 연결 완료 시 호출됨
+    console.log('[Tetris] onConnectionEstablished called');
+    console.log('[Tetris] startModal exists:', !!this.startModal);
+
+    // 준비 모달 표시
+    this.showStartModal();
+  }
+
+  handleReadyClick() {
+    console.log('[Tetris] handleReadyClick called, isReady:', this.isReady);
+    if (this.isReady) return; // 이미 준비됨
+
+    this.isReady = true;
+    this.updateReadyStatus();
+
+    console.log('[Tetris] Sending ready message');
+    // 상대에게 준비 메시지 전송
+    this.onMove({
+      tetrisType: 'ready',
+      ready: true
+    });
+
+    // 양쪽 모두 준비되었는지 확인
+    this.checkBothReady();
+  }
+
+  updateReadyStatus() {
+    const myStatus = document.getElementById('myReadyStatus');
+    const opponentStatus = document.getElementById('opponentReadyStatus');
+
+    console.log('[Tetris] updateReadyStatus - myStatus:', myStatus, 'opponentStatus:', opponentStatus);
+    console.log('[Tetris] isReady:', this.isReady, 'opponentReady:', this.opponentReady);
+
+    if (myStatus) myStatus.textContent = this.isReady ? '✅' : '❌';
+    if (opponentStatus) opponentStatus.textContent = this.opponentReady ? '✅' : '❌';
+
+    // 버튼 업데이트
+    const readyBtn = this.startModal ? this.startModal.querySelector('.ready-btn') : null;
+    if (readyBtn) {
+      readyBtn.disabled = this.isReady;
+      readyBtn.textContent = this.isReady ? '준비 완료!' : '준비완료';
+    }
+  }
+
+  checkBothReady() {
+    console.log('[Tetris] checkBothReady - isReady:', this.isReady, 'opponentReady:', this.opponentReady, 'gameStarted:', this.gameStarted, 'myColor:', this.game.myColor);
+    if (this.isReady && this.opponentReady && !this.gameStarted) {
+      // Host만 게임 시작 트리거
+      // Client는 start 메시지를 기다림
+      if (this.game.myColor === 'player1') {
+        console.log('[Tetris] Host triggering game start in 500ms');
+        setTimeout(() => {
+          this.startGame();
+        }, 500); // 시각적 피드백을 위한 약간의 지연
+      } else {
+        console.log('[Tetris] Client waiting for start message from host');
+      }
+    }
+  }
+
+  startGame() {
+    console.log('[Tetris] startGame called, gameStarted:', this.gameStarted);
+    // 중복 호출 방지
+    if (this.gameStarted) {
+      console.log('[Tetris] Game already started, returning');
+      return;
+    }
+
+    this.gameStarted = true;
+    const seed = Date.now();
+
+    console.log('[Tetris] Initializing game with seed:', seed);
+    this.game.initialize(seed);
+
+    // Client에게 시작 메시지 전송
+    console.log('[Tetris] Sending start message to client');
+    this.onMove({
+      tetrisType: 'start',
+      seed: seed,
+      gameOver: false
+    });
+
+    this.hideStartModal();
+    console.log('[Tetris] Starting game loop');
+    this.startGameLoop();
+  }
+  
+  showStartModal() {
+    console.log('[Tetris] showStartModal called');
+    if (this.startModal) {
+      this.startModal.classList.add('active');
+      this.startModal.style.display = 'flex';
+      console.log('[Tetris] Modal shown');
+    } else {
+      console.error('[Tetris] startModal is null!');
+    }
+  }
+
+  hideStartModal() {
+    console.log('[Tetris] hideStartModal called');
+    if (this.startModal) {
+      this.startModal.classList.remove('active');
+      // 확실하게 숨기기 위해 display도 직접 설정
+      this.startModal.style.display = 'none';
+      console.log('[Tetris] Modal hidden');
+    }
+  }
+  
+  setupEventListeners() {
+    document.addEventListener('keydown', this.handleKeyDown);
+    document.addEventListener('keyup', this.handleKeyUp);
+  }
+  
+  handleKeyDown(e) {
+    if (!this.game.isStarted || this.game.gameOver) return;
+    
+    // 중복 키 방지
+    if (this.keyState[e.code]) return;
+    this.keyState[e.code] = true;
+    
+    switch (e.code) {
+      case 'ArrowLeft':
+        this.game.move(-1, 0);
+        this.startKeyRepeat('ArrowLeft', () => this.game.move(-1, 0));
+        e.preventDefault();
+        break;
+      case 'ArrowRight':
+        this.game.move(1, 0);
+        this.startKeyRepeat('ArrowRight', () => this.game.move(1, 0));
+        e.preventDefault();
+        break;
+      case 'ArrowDown':
+        this.game.softDrop();
+        this.startKeyRepeat('ArrowDown', () => this.game.softDrop(), 50);
+        e.preventDefault();
+        break;
+      case 'ArrowUp':
+        this.game.rotate(1);
+        e.preventDefault();
+        break;
+      case 'KeyZ':
+        this.game.rotate(-1);
+        e.preventDefault();
+        break;
+      case 'KeyX':
+        this.game.rotate(1);
+        e.preventDefault();
+        break;
+      case 'Space':
+        this.handleHardDrop();
+        e.preventDefault();
+        break;
+      case 'KeyC':
+      case 'ShiftLeft':
+        this.game.hold();
+        e.preventDefault();
+        break;
+    }
+  }
+  
+  handleKeyUp(e) {
+    this.keyState[e.code] = false;
+    this.stopKeyRepeat(e.code);
+  }
+  
+  startKeyRepeat(key, action, delay = null) {
+    this.stopKeyRepeat(key);
+    
+    const dasDelay = delay || this.das;
+    const arrDelay = delay || this.arr;
+    
+    this.keyTimers[key] = setTimeout(() => {
+      this.keyTimers[key + '_interval'] = setInterval(() => {
+        if (this.keyState[key]) {
+          action();
+        }
+      }, arrDelay);
+    }, dasDelay);
+  }
+  
+  stopKeyRepeat(key) {
+    if (this.keyTimers[key]) {
+      clearTimeout(this.keyTimers[key]);
+      delete this.keyTimers[key];
+    }
+    if (this.keyTimers[key + '_interval']) {
+      clearInterval(this.keyTimers[key + '_interval']);
+      delete this.keyTimers[key + '_interval'];
+    }
+  }
+  
+  handleHardDrop() {
+    const result = this.game.hardDrop();
+    if (result) {
+      if (result.type === 'gameOver') {
+        this.handleGameOver();
+      } else if (result.attack > 0) {
+        this.sendAttack(result.attack);
+      }
+    }
+  }
+  
+  sendAttack(lines) {
+    console.log('[Tetris] Sending attack to opponent, lines:', lines);
+    this.onMove({
+      tetrisType: 'attack',
+      attack: lines,
+      gameOver: false
+    });
+  }
+  
+  sendState() {
+    this.onMove({
+      tetrisType: 'state',
+      opponentState: this.game.getStateForOpponent(),
+      gameOver: this.game.gameOver
+    });
+  }
+  
+  handleGameOver() {
+    this.stopGameLoop();
+    this.onMove({
+      tetrisType: 'gameOver',
+      gameOver: true,
+      winner: this.game.myColor === 'player1' ? 'player2' : 'player1',
+      reason: 'block_out'
+    });
+  }
+  
+  startGameLoop() {
+    if (this.isRunning) return;
+    this.isRunning = true;
+    this.lastTime = performance.now();
+    this.dropAccumulator = 0;
+    this.animationId = requestAnimationFrame(this.gameLoop);
+    
+    // 상태 동기화 시작
+    this.syncInterval = setInterval(() => {
+      this.sendState();
+    }, this.syncRate);
+  }
+  
+  stopGameLoop() {
+    this.isRunning = false;
+    if (this.animationId) {
+      cancelAnimationFrame(this.animationId);
+      this.animationId = null;
+    }
+    if (this.syncInterval) {
+      clearInterval(this.syncInterval);
+      this.syncInterval = null;
+    }
+  }
+  
+  gameLoop(currentTime) {
+    if (!this.isRunning) return;
+    
+    const deltaTime = currentTime - this.lastTime;
+    this.lastTime = currentTime;
+    
+    // 자동 낙하
+    if (this.game.isStarted && !this.game.gameOver) {
+      this.dropAccumulator += deltaTime;
+      const gravity = this.game.getGravity();
+      
+      while (this.dropAccumulator >= gravity) {
+        this.dropAccumulator -= gravity;
+        if (!this.game.softDrop()) {
+          // 바닥에 닿음 - 락 딜레이 후 고정
+          this.dropAccumulator = 0;
+          const result = this.game.lockPiece();
+          if (result) {
+            if (result.type === 'gameOver') {
+              this.handleGameOver();
+              return;
+            } else if (result.attack > 0) {
+              this.sendAttack(result.attack);
+            }
+          }
+        }
+      }
+    }
+    
+    this.render();
+    this.animationId = requestAnimationFrame(this.gameLoop);
+  }
+  
+  render() {
+    this.renderMyBoard();
+    this.renderOpponentBoard();
+    this.renderHold();
+    this.renderNext();
+    this.updateStats();
+  }
+  
+  renderMyBoard() {
+    const ctx = this.myCtx;
+    const cellSize = this.cellSize;
+    
+    // 배경
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(0, 0, this.myCanvas.width, this.myCanvas.height);
+    
+    // 격자
+    ctx.strokeStyle = '#2a2a4e';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= TETRIS_BOARD_WIDTH; x++) {
+      ctx.beginPath();
+      ctx.moveTo(x * cellSize, 0);
+      ctx.lineTo(x * cellSize, this.myCanvas.height);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= TETRIS_BOARD_HEIGHT; y++) {
+      ctx.beginPath();
+      ctx.moveTo(0, y * cellSize);
+      ctx.lineTo(this.myCanvas.width, y * cellSize);
+      ctx.stroke();
+    }
+    
+    // 보드 블록
+    for (let y = TETRIS_BUFFER_HEIGHT; y < TETRIS_BOARD_HEIGHT + TETRIS_BUFFER_HEIGHT; y++) {
+      for (let x = 0; x < TETRIS_BOARD_WIDTH; x++) {
+        const cell = this.game.board[y][x];
+        if (cell) {
+          this.drawBlock(ctx, x, y - TETRIS_BUFFER_HEIGHT, cell, cellSize);
+        }
+      }
+    }
+    
+    // 고스트 피스
+    if (this.game.currentType && !this.game.gameOver) {
+      const ghostY = this.game.getGhostY();
+      const shape = this.game.getShape();
+      const color = TETROMINOS[this.game.currentType].color;
+      
+      ctx.globalAlpha = 0.3;
+      for (let py = 0; py < shape.length; py++) {
+        for (let px = 0; px < shape[py].length; px++) {
+          if (shape[py][px]) {
+            const bx = this.game.position.x + px;
+            const by = ghostY + py - TETRIS_BUFFER_HEIGHT;
+            if (by >= 0) {
+              this.drawBlock(ctx, bx, by, color, cellSize);
+            }
+          }
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+    
+    // 현재 피스
+    if (this.game.currentType && !this.game.gameOver) {
+      const shape = this.game.getShape();
+      const color = TETROMINOS[this.game.currentType].color;
+      
+      for (let py = 0; py < shape.length; py++) {
+        for (let px = 0; px < shape[py].length; px++) {
+          if (shape[py][px]) {
+            const bx = this.game.position.x + px;
+            const by = this.game.position.y + py - TETRIS_BUFFER_HEIGHT;
+            if (by >= 0) {
+              this.drawBlock(ctx, bx, by, color, cellSize);
+            }
+          }
+        }
+      }
+    }
+    
+    // 가비지 경고 바
+    if (this.game.pendingGarbage > 0) {
+      ctx.fillStyle = '#ff4444';
+      const garbageHeight = (this.game.pendingGarbage / 20) * this.myCanvas.height;
+      ctx.fillRect(this.myCanvas.width - 6, this.myCanvas.height - garbageHeight, 4, garbageHeight);
+    }
+  }
+  
+  renderOpponentBoard() {
+    const ctx = this.opponentCtx;
+    const cellSize = this.miniCellSize;
+    
+    // 배경
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(0, 0, this.opponentCanvas.width, this.opponentCanvas.height);
+    
+    // 상대방 상태가 없으면 빈 보드
+    if (!this.game.opponentState) return;
+    
+    const board = this.game.opponentState.board;
+    if (!board) return;
+    
+    // 보드 블록
+    for (let y = TETRIS_BUFFER_HEIGHT; y < TETRIS_BOARD_HEIGHT + TETRIS_BUFFER_HEIGHT; y++) {
+      for (let x = 0; x < TETRIS_BOARD_WIDTH; x++) {
+        const cell = board[y]?.[x];
+        if (cell) {
+          this.drawBlock(ctx, x, y - TETRIS_BUFFER_HEIGHT, cell, cellSize);
+        }
+      }
+    }
+    
+    // 게임 오버 표시
+    if (this.game.opponentState.gameOver) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(0, 0, this.opponentCanvas.width, this.opponentCanvas.height);
+      ctx.fillStyle = '#ff4444';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('GAME OVER', this.opponentCanvas.width / 2, this.opponentCanvas.height / 2);
+    }
+  }
+  
+  renderHold() {
+    const ctx = this.holdCtx;
+    ctx.clearRect(0, 0, this.holdCanvas.width, this.holdCanvas.height);
+    
+    if (!this.game.holdPiece) return;
+    
+    const shape = TETROMINOS[this.game.holdPiece].shapes[0];
+    const color = this.game.canHold ? TETROMINOS[this.game.holdPiece].color : '#555';
+    const miniSize = 18;
+    
+    const offsetX = (this.holdCanvas.width - shape[0].length * miniSize) / 2;
+    const offsetY = (this.holdCanvas.height - shape.length * miniSize) / 2;
+    
+    for (let py = 0; py < shape.length; py++) {
+      for (let px = 0; px < shape[py].length; px++) {
+        if (shape[py][px]) {
+          ctx.fillStyle = color;
+          ctx.fillRect(offsetX + px * miniSize, offsetY + py * miniSize, miniSize - 1, miniSize - 1);
+        }
+      }
+    }
+  }
+  
+  renderNext() {
+    const ctx = this.nextCtx;
+    ctx.clearRect(0, 0, this.nextCanvas.width, this.nextCanvas.height);
+    
+    const nextPieces = this.game.getNextPieces(5);
+    const miniSize = 16;
+    let yOffset = 10;
+    
+    for (const pieceType of nextPieces) {
+      const shape = TETROMINOS[pieceType].shapes[0];
+      const color = TETROMINOS[pieceType].color;
+      const offsetX = (this.nextCanvas.width - shape[0].length * miniSize) / 2;
+      
+      for (let py = 0; py < shape.length; py++) {
+        for (let px = 0; px < shape[py].length; px++) {
+          if (shape[py][px]) {
+            ctx.fillStyle = color;
+            ctx.fillRect(offsetX + px * miniSize, yOffset + py * miniSize, miniSize - 1, miniSize - 1);
+          }
+        }
+      }
+      
+      yOffset += shape.length * miniSize + 10;
+    }
+  }
+  
+  drawBlock(ctx, x, y, color, size) {
+    // 메인 색상
+    ctx.fillStyle = color;
+    ctx.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+    
+    // 하이라이트 (위, 왼쪽)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.fillRect(x * size + 1, y * size + 1, size - 2, 2);
+    ctx.fillRect(x * size + 1, y * size + 1, 2, size - 2);
+    
+    // 그림자 (아래, 오른쪽)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(x * size + 1, y * size + size - 3, size - 2, 2);
+    ctx.fillRect(x * size + size - 3, y * size + 1, 2, size - 2);
+  }
+  
+  updateStats() {
+    // 내 통계
+    this.myPanel.querySelector('.my-score').textContent = this.game.score.toLocaleString();
+    this.myPanel.querySelector('.my-level').textContent = this.game.level;
+    this.myPanel.querySelector('.my-lines').textContent = this.game.lines;
+
+    // 가비지 바 (왼쪽에서 오른쪽으로 채움)
+    const garbageFill = this.myPanel.querySelector('.my-garbage');
+    const garbagePercent = (this.game.pendingGarbage / 20) * 100;
+    if (this.game.pendingGarbage > 0) {
+      console.log('[Tetris] Garbage update - pending:', this.game.pendingGarbage, 'percent:', garbagePercent, 'element:', garbageFill);
+    }
+    if (garbageFill) {
+      garbageFill.style.width = garbagePercent + '%';
+    }
+
+    // 상대방 통계
+    if (this.game.opponentState) {
+      this.opponentPanel.querySelector('.opp-score').textContent = (this.game.opponentState.score || 0).toLocaleString();
+      this.opponentPanel.querySelector('.opp-level').textContent = this.game.opponentState.level || 1;
+      this.opponentPanel.querySelector('.opp-lines').textContent = this.game.opponentState.lines || 0;
+    }
+  }
+  
+  updateFromMove(moveData) {
+    console.log('[Tetris] updateFromMove called, type:', moveData.tetrisType);
+
+    // 준비 상태 메시지
+    if (moveData.tetrisType === 'ready') {
+      console.log('[Tetris] Received ready message, ready:', moveData.ready);
+      this.opponentReady = moveData.ready;
+      this.updateReadyStatus();
+      this.checkBothReady();
+      return;
+    }
+
+    // 게임 시작 메시지 (client가 host로부터 받음)
+    if (moveData.tetrisType === 'start') {
+      console.log('[Tetris] Received start message, seed:', moveData.seed);
+      // gameStarted 체크 제거 - 항상 처리
+      this.gameStarted = true;
+      this.game.initialize(moveData.seed);
+      this.hideStartModal();
+      console.log('[Tetris] Client starting game loop');
+      this.startGameLoop();
+      return;
+    }
+
+    // Attack 메시지 디버깅
+    if (moveData.tetrisType === 'attack') {
+      console.log('[Tetris] Received attack message, attack:', moveData.attack, 'before pendingGarbage:', this.game.pendingGarbage);
+    }
+
+    // 일반 상태 업데이트
+    this.game.applyMove(moveData);
+
+    // Attack 후 상태 확인
+    if (moveData.tetrisType === 'attack') {
+      console.log('[Tetris] After applyMove, pendingGarbage:', this.game.pendingGarbage);
+    }
+    
+    // 상대방 게임 오버 시 내가 승리
+    if (moveData.tetrisType === 'gameOver' || moveData.gameOver) {
+      if (!this.game.gameOver) {
+        // 나는 아직 살아있음 = 승리
+        this.stopGameLoop();
+        this.onMove({
+          gameOver: true,
+          winner: this.game.myColor,
+          reason: 'opponent_out'
+        });
+      }
+    }
+    
+    this.render();
+  }
+  
+  cleanup() {
+    this.stopGameLoop();
+    document.removeEventListener('keydown', this.handleKeyDown);
+    document.removeEventListener('keyup', this.handleKeyUp);
+
+    // 턴 기반 UI 요소 복원 및 풀스크린 모드 해제 (다른 게임으로 전환 시)
+    document.querySelector('.container').classList.remove('tetris-active');
+    document.querySelector('.container').classList.remove('tetris-fullscreen');
+    document.body.classList.remove('tetris-mode');
+
+    // 모든 키 타이머 정리
+    for (const key of Object.keys(this.keyTimers)) {
+      if (key.endsWith('_interval')) {
+        clearInterval(this.keyTimers[key]);
+      } else {
+        clearTimeout(this.keyTimers[key]);
+      }
+    }
+
+    if (this.wrapper) {
+      this.wrapper.remove();
+    }
+    if (this.startModal) {
+      this.startModal.remove();
+    }
+  }
+}
+
+window.TetrisRenderer = TetrisRenderer;

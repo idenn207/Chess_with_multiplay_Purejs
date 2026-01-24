@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LAN Multi Game</title>
+  <link rel="stylesheet" href="styles/reset.css">
+  <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="styles/chess.css">
+  <link rel="stylesheet" href="styles/gomoku.css">
+  <link rel="stylesheet" href="styles/janggi.css">
+  <link rel="stylesheet" href="styles/tetris.css">
+</head>
+
+<body>
+  <div class="container">
+    <h1 id="pageTitle">🎮 LAN Multi Game</h1>
+
+    <!-- 역할 선택 -->
+    <div class="role-selection" id="roleSelection">
+      <h2>역할 선택</h2>
+      <div class="role-buttons">
+        <button class="role-btn" data-role="server">
+          <span class="icon">🎲</span>
+          <span class="title">호스트</span>
+          <span class="desc">게임을 선택하고 방을 만듭니다</span>
+        </button>
+        <button class="role-btn" data-role="client">
+          <span class="icon">🎮</span>
+          <span class="title">참가자</span>
+          <span class="desc">호스트의 방에 참가합니다</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 게임 선택 (서버 전용) -->
+    <div class="game-selection" id="gameSelection">
+      <h2>게임 선택</h2>
+      <div class="game-buttons" id="gameButtons">
+        <!-- 동적으로 생성됨 -->
+      </div>
+    </div>
+
+    <!-- 서버 연결 (클라이언트 전용) -->
+    <div class="connection-panel" id="connectionPanel">
+      <h2>방 참가</h2>
+      <div class="instruction">
+        호스트에게 연결 코드를 받아 입력하세요.
+      </div>
+      <button class="action-btn primary full-width" id="connectBtn">연결 코드 입력</button>
+    </div>
+
+    <!-- 서버 정보 -->
+    <div class="server-info" id="serverInfo">
+      <h3>호스트 정보</h3>
+      <div class="info-row">
+        <strong>선택한 게임:</strong>
+        <span id="selectedGameName">-</span>
+      </div>
+      <div class="info-row">
+        <strong>상태:</strong>
+        <span>
+          <span class="status-indicator" id="statusIndicator"></span>
+          <span id="serverStatus">대기 중...</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- 게임 영역 -->
+    <div id="gameArea">
+      <div class="game-info" id="gameInfo">
+        <div class="info-item">
+          <strong>게임:</strong> <span id="currentGameName">-</span>
+        </div>
+        <div class="info-item">
+          <strong>내 색상:</strong> <span id="myColor">-</span>
+        </div>
+        <div class="info-item">
+          <strong>현재 차례:</strong> <span id="currentTurn">-</span>
+        </div>
+      </div>
+
+      <!-- 게임 보드와 턴 표시기 래퍼 -->
+      <div class="game-board-wrapper">
+        <!-- 왼쪽 턴 표시기 (나) -->
+        <div class="turn-indicator left" id="turnIndicatorLeft">
+          <div class="turn-label">ME</div>
+          <div class="timer-bar-wrapper">
+            <div class="timer-bar" id="myTimerBar"></div>
+          </div>
+          <div class="timer-text" id="myTimerText">30</div>
+        </div>
+
+        <!-- 게임 보드 컨테이너 -->
+        <div id="boardContainer"></div>
+
+        <!-- 오른쪽 턴 표시기 (상대방) -->
+        <div class="turn-indicator right" id="turnIndicatorRight">
+          <div class="turn-label">OPPONENT</div>
+          <div class="timer-bar-wrapper">
+            <div class="timer-bar" id="opponentTimerBar"></div>
+          </div>
+          <div class="timer-text" id="opponentTimerText">30</div>
+        </div>
+      </div>
+
+      <div class="button-group">
+        <button class="action-btn danger" id="resignBtn" disabled>기권</button>
+        <button class="action-btn secondary" id="newGameBtn">새 게임</button>
+      </div>
+    </div>
+
+    <!-- 게임 상태 오버레이 -->
+    <div class="game-overlay" id="gameOverlay">
+      <div class="overlay-content">
+        <div class="overlay-message" id="overlayMessage">Winner!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 게임 로직 -->
+  <script src="src/game/chess.js"></script>
+  <script src="src/game/gomoku.js"></script>
+  <script src="src/game/janggi.js"></script>
+  <script src="src/game/tetris.js"></script>
+
+  <!-- 렌더러 -->
+  <script src="src/renderer/chess-renderer.js"></script>
+  <script src="src/renderer/gomoku-renderer.js"></script>
+  <script src="src/renderer/janggi-renderer.js"></script>
+  <script src="src/renderer/tetris-renderer.js"></script>
+
+  <!-- 네트워크 -->
+  <script src="src/network/webrtc-manager.js"></script>
+  <script src="src/network/signaling-ui.js"></script>
+
+  <!-- 게임 레지스트리 및 메인 앱 -->
+  <script src="src/game-registry.js"></script>
+  <script src="src/app.js"></script>
+</body>
+
+</html>

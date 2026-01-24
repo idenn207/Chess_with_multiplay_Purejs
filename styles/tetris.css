@@ -1,0 +1,430 @@
+/* 테트리스 전용 스타일 */
+
+/* 메인 래퍼 */
+.tetris-wrapper {
+  display: flex;
+  gap: 30px;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+/* 풀스크린 모드에서 테트리스 래퍼 위치 */
+.container.tetris-fullscreen .tetris-wrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  padding: 10px;
+  max-height: 100vh;
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+
+/* 패널 공통 */
+.tetris-panel {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 15px;
+  padding: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border: 2px solid #2a2a4e;
+}
+
+.tetris-panel.my-panel {
+  border-color: #667eea;
+  box-shadow: 0 0 20px rgba(102, 126, 234, 0.3),
+              0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.tetris-panel.opponent-panel {
+  border-color: #f56565;
+  box-shadow: 0 0 20px rgba(245, 101, 101, 0.3),
+              0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* 헤더 */
+.tetris-header {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.player-label {
+  font-size: 1.2em;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.my-panel .player-label {
+  color: #667eea;
+  text-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+}
+
+.opponent-panel .player-label {
+  color: #f56565;
+  text-shadow: 0 0 10px rgba(245, 101, 101, 0.5);
+}
+
+/* 메인 게임 영역 */
+.tetris-main {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.tetris-main.mini {
+  justify-content: center;
+}
+
+/* 보드 캔버스 */
+.tetris-board-canvas {
+  border: 3px solid #3a3a5e;
+  border-radius: 5px;
+  background: #0a0a1a;
+}
+
+.tetris-board-canvas.mini {
+  border-width: 2px;
+}
+
+/* 사이드 패널 (홀드, 넥스트) */
+.tetris-side {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.tetris-hold,
+.tetris-next {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 8px;
+  border: 1px solid #2a2a4e;
+}
+
+.side-label {
+  font-size: 0.75em;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: #888;
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+.hold-canvas,
+.next-canvas {
+  display: block;
+  background: transparent;
+}
+
+/* 통계 */
+.tetris-stats {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 1px solid #2a2a4e;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.stat-label {
+  font-size: 0.7em;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #666;
+}
+
+.stat-value {
+  font-size: 1.3em;
+  font-weight: 700;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+}
+
+.my-panel .stat-value {
+  color: #667eea;
+}
+
+.opponent-panel .stat-value {
+  color: #f56565;
+}
+
+/* 가비지 바 */
+.tetris-garbage {
+  margin-top: 10px;
+}
+
+.garbage-label {
+  font-size: 0.75em;
+  font-weight: 700;
+  color: #ff4444;
+  text-align: center;
+  margin-bottom: 5px;
+  letter-spacing: 1px;
+  text-shadow: 0 0 5px rgba(255, 68, 68, 0.5);
+}
+
+.garbage-bar {
+  width: 100%;
+  height: 24px;
+  background: rgba(26, 26, 46, 0.9);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 3px solid rgba(255, 68, 68, 0.3);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.4),
+              0 0 15px rgba(255, 68, 68, 0.2);
+}
+
+.garbage-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #ff2222 0%, #ff4444 50%, #ff6b6b 100%);
+  transition: width 0.3s ease;
+  position: relative;
+  box-shadow: 0 0 20px rgba(255, 68, 68, 0.8),
+              inset -2px 0 10px rgba(255, 34, 34, 0.5);
+  border-right: 2px solid rgba(255, 100, 100, 0.5);
+}
+
+/* 시작 모달 */
+.tetris-start-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.tetris-start-modal.active {
+  display: flex;
+}
+
+.start-content {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  border: 2px solid #667eea;
+  box-shadow: 0 0 40px rgba(102, 126, 234, 0.4);
+  max-width: 400px;
+}
+
+.start-content h2 {
+  font-size: 3em;
+  color: #fff;
+  margin-bottom: 20px;
+  text-shadow: 0 0 20px rgba(102, 126, 234, 0.8);
+}
+
+.start-message {
+  color: #aaa;
+  margin-bottom: 25px;
+  font-size: 1.1em;
+}
+
+.start-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 15px 50px;
+  font-size: 1.3em;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 30px;
+}
+
+.start-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+}
+
+/* 준비 버튼 */
+.ready-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 15px 50px;
+  font-size: 1.3em;
+  font-weight: bold;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  margin: 20px 0;
+}
+
+.ready-btn:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+}
+
+.ready-btn:disabled {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  cursor: not-allowed;
+  opacity: 0.9;
+}
+
+/* 준비 상태 표시 */
+.ready-status {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin: 20px 0;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+}
+
+.ready-indicator {
+  font-size: 1.2em;
+  color: #fff;
+  font-weight: bold;
+}
+
+/* 컨트롤 정보 */
+.controls-info {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 20px;
+  border-radius: 10px;
+  text-align: left;
+}
+
+.control-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 8px 0;
+  color: #888;
+  font-size: 0.9em;
+}
+
+.control-row .key {
+  background: #2a2a4e;
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-family: monospace;
+  color: #fff;
+  min-width: 60px;
+  text-align: center;
+}
+
+/* 게임 오버 오버레이 (기존 스타일 활용) */
+.tetris-panel.game-over .tetris-board-canvas {
+  opacity: 0.5;
+}
+
+/* 애니메이션 */
+@keyframes tetrisPulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(102, 126, 234, 0.6);
+  }
+}
+
+.tetris-panel.active {
+  animation: tetrisPulse 2s ease-in-out infinite;
+}
+
+/* 공격 효과 */
+@keyframes attackFlash {
+  0% {
+    background-color: rgba(255, 68, 68, 0.3);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.tetris-panel.attacked {
+  animation: attackFlash 0.3s ease-out;
+}
+
+/* 반응형 - 수평 레이아웃 유지 및 비례 축소 */
+@media (max-width: 900px) {
+  .tetris-wrapper {
+    gap: 15px;
+    padding: 10px;
+  }
+
+  .tetris-panel.my-panel {
+    transform: scale(0.85);
+    transform-origin: top center;
+  }
+
+  .tetris-panel.opponent-panel {
+    transform: scale(0.75);
+    transform-origin: top center;
+  }
+}
+
+@media (max-width: 700px) {
+  .tetris-wrapper {
+    gap: 10px;
+    padding: 5px;
+  }
+
+  .tetris-panel.my-panel {
+    transform: scale(0.7);
+    transform-origin: top left;
+  }
+
+  .tetris-panel.opponent-panel {
+    transform: scale(0.6);
+    transform-origin: top left;
+  }
+}
+
+@media (max-width: 500px) {
+  .tetris-wrapper {
+    gap: 5px;
+    padding: 5px;
+  }
+
+  .tetris-panel.my-panel {
+    transform: scale(0.55);
+    transform-origin: top left;
+  }
+
+  .tetris-panel.opponent-panel {
+    transform: scale(0.45);
+    transform-origin: top left;
+  }
+
+  .start-content {
+    padding: 25px;
+    margin: 10px;
+  }
+
+  .start-content h2 {
+    font-size: 2em;
+  }
+
+  .start-btn {
+    padding: 12px 30px;
+    font-size: 1em;
+  }
+}

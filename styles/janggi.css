@@ -1,0 +1,260 @@
+/* 장기 보드 */
+.janggi-board {
+  display: grid;
+  grid-template-columns: repeat(9, 60px);
+  grid-template-rows: repeat(10, 60px);
+  gap: 0;
+  background: #e8c878;
+  border: 4px solid #5d4e37;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(0, 0, 0, 0.1);
+  border-radius: 5px;
+  position: relative;
+}
+
+/* 격자선 - 셀 중앙을 지나가도록 */
+.janggi-board::before {
+  content: '';
+  position: absolute;
+  top: 30px; /* 첫 번째 행 셀의 중앙 */
+  left: 30px; /* 첫 번째 열 셀의 중앙 */
+  right: 30px; /* 마지막 열 셀의 중앙 */
+  bottom: 30px; /* 마지막 행 셀의 중앙 */
+  background: 
+    /* 세로선 (8개 내부선) */ repeating-linear-gradient(90deg, transparent 0px, transparent 58px, #8b6914 58px, #8b6914 60px),
+    /* 가로선 (9개 내부선) */ repeating-linear-gradient(0deg, transparent 0px, transparent 58px, #8b6914 58px, #8b6914 60px);
+  border: 2px solid #8b6914;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 한 궁성 대각선 (위쪽: row 0~2, col 3~5) */
+.janggi-board::after {
+  content: '';
+  position: absolute;
+  /* 교차점 기준: (0,3)에서 (2,5)까지 */
+  top: 30px; /* row 0 중앙 */
+  left: calc(30px + 3 * 60px); /* col 3 중앙 = 210px */
+  width: calc(2 * 60px); /* col 3에서 col 5까지 = 120px */
+  height: calc(2 * 60px); /* row 0에서 row 2까지 = 120px */
+  background: linear-gradient(to bottom right, transparent calc(50% - 1px), #8b6914 calc(50% - 1px), #8b6914 calc(50% + 1px), transparent calc(50% + 1px)),
+    linear-gradient(to bottom left, transparent calc(50% - 1px), #8b6914 calc(50% - 1px), #8b6914 calc(50% + 1px), transparent calc(50% + 1px));
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 초 궁성 대각선 (아래쪽: row 7~9, col 3~5) */
+.janggi-board .palace-lines {
+  position: absolute;
+  /* 교차점 기준: (7,3)에서 (9,5)까지 */
+  top: calc(30px + 7 * 60px); /* row 7 중앙 = 450px */
+  left: calc(30px + 3 * 60px); /* col 3 중앙 = 210px */
+  width: calc(2 * 60px); /* 120px */
+  height: calc(2 * 60px); /* 120px */
+  background: linear-gradient(to bottom right, transparent calc(50% - 1px), #8b6914 calc(50% - 1px), #8b6914 calc(50% + 1px), transparent calc(50% + 1px)),
+    linear-gradient(to bottom left, transparent calc(50% - 1px), #8b6914 calc(50% - 1px), #8b6914 calc(50% + 1px), transparent calc(50% + 1px));
+  pointer-events: none;
+  z-index: 1;
+}
+
+.janggi-cell {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  z-index: 2;
+  /* 셀 자체는 투명 - 격자선이 배경에서 보임 */
+}
+
+.janggi-cell:hover:not(.has-piece) {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+}
+
+/* 궁성 표시 - 제거 (대각선으로 충분) */
+.janggi-cell.palace {
+  /* 배경 없음 */
+}
+
+/* 선택된 칸 */
+.janggi-cell.selected {
+  background: rgba(255, 215, 0, 0.5);
+  border-radius: 50%;
+  box-shadow: inset 0 0 15px rgba(255, 215, 0, 0.8);
+}
+
+/* 이동 가능 위치 */
+.janggi-cell.valid-move::after {
+  content: '';
+  width: 20px;
+  height: 20px;
+  background: rgba(76, 175, 80, 0.6);
+  border-radius: 50%;
+  position: absolute;
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.8);
+}
+
+/* 잡을 수 있는 위치 */
+.janggi-cell.valid-capture::after {
+  content: '';
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(244, 67, 54, 0.7);
+  border-radius: 50%;
+  position: absolute;
+  box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
+}
+
+/* 체크 상태 */
+.janggi-cell.in-check {
+  background: rgba(244, 67, 54, 0.4);
+  border-radius: 50%;
+  animation: janggi-check-pulse 1s infinite;
+}
+
+/* 마지막 이동 표시 */
+.janggi-cell.last-move {
+  background: rgba(255, 235, 59, 0.4);
+  border-radius: 50%;
+}
+
+/* 기물 스타일 */
+.janggi-piece {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  user-select: none;
+  border: 3px solid;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.janggi-piece:hover {
+  transform: scale(1.08);
+}
+
+/* 선택된 기물 강조 */
+.janggi-cell.selected .janggi-piece {
+  transform: scale(1.12);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* 초(빨강) 기물 */
+.janggi-piece.cho {
+  background: linear-gradient(145deg, #fff5f5, #ffe0e0);
+  color: #c0392b;
+  border-color: #c0392b;
+  box-shadow: 0 4px 8px rgba(192, 57, 43, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+}
+
+/* 한(파랑) 기물 */
+.janggi-piece.han {
+  background: linear-gradient(145deg, #f0f8ff, #d6eaf8);
+  color: #2471a3;
+  border-color: #2471a3;
+  box-shadow: 0 4px 8px rgba(36, 113, 163, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+}
+
+/* 궁(왕) 특별 스타일 */
+.janggi-piece.king {
+  width: 52px;
+  height: 52px;
+  font-size: 1.7em;
+  font-weight: 900;
+}
+
+.janggi-piece.cho.king {
+  background: linear-gradient(145deg, #ffe6e6, #ffcccc);
+  border-width: 4px;
+  box-shadow: 0 4px 12px rgba(192, 57, 43, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.6);
+}
+
+.janggi-piece.han.king {
+  background: linear-gradient(145deg, #e6f3ff, #cce5ff);
+  border-width: 4px;
+  box-shadow: 0 4px 12px rgba(36, 113, 163, 0.4), inset 0 2px 6px rgba(255, 255, 255, 0.6);
+}
+
+@keyframes janggi-check-pulse {
+  0%,
+  100% {
+    background: rgba(244, 67, 54, 0.4);
+    box-shadow: 0 0 10px rgba(244, 67, 54, 0.3);
+  }
+  50% {
+    background: rgba(244, 67, 54, 0.6);
+    box-shadow: 0 0 20px rgba(244, 67, 54, 0.5);
+  }
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .janggi-board {
+    grid-template-columns: repeat(9, 40px);
+    grid-template-rows: repeat(10, 40px);
+  }
+
+  /* 격자선 - 40px 셀 기준 */
+  .janggi-board::before {
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    background: repeating-linear-gradient(90deg, transparent 0px, transparent 38px, #8b6914 38px, #8b6914 40px),
+      repeating-linear-gradient(0deg, transparent 0px, transparent 38px, #8b6914 38px, #8b6914 40px);
+    border: 2px solid #8b6914;
+  }
+
+  /* 한 궁성 대각선 - 반응형 */
+  .janggi-board::after {
+    top: 20px;
+    left: calc(20px + 3 * 40px);
+    width: calc(2 * 40px);
+    height: calc(2 * 40px);
+  }
+
+  /* 초 궁성 대각선 - 반응형 */
+  .janggi-board .palace-lines {
+    top: calc(20px + 7 * 40px);
+    left: calc(20px + 3 * 40px);
+    width: calc(2 * 40px);
+    height: calc(2 * 40px);
+  }
+
+  .janggi-cell {
+    width: 40px;
+    height: 40px;
+  }
+
+  .janggi-piece {
+    width: 34px;
+    height: 34px;
+    font-size: 1.1em;
+    border-width: 2px;
+  }
+
+  .janggi-piece.king {
+    width: 36px;
+    height: 36px;
+    font-size: 1.2em;
+  }
+
+  .janggi-cell.valid-move::after {
+    width: 14px;
+    height: 14px;
+  }
+
+  .janggi-cell.valid-capture::after {
+    width: 32px;
+    height: 32px;
+    border-width: 3px;
+  }
+}

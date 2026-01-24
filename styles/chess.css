@@ -1,0 +1,174 @@
+/* 체스 보드 */
+.chess-board {
+  display: grid;
+  grid-template-columns: repeat(8, 70px);
+  grid-template-rows: repeat(8, 70px);
+  gap: 0;
+  border: 3px solid #333;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  background: #fff;
+}
+
+.chess-square {
+  width: 70px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3em;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  user-select: none;
+}
+
+.chess-square.light {
+  background-color: #f0d9b5;
+}
+
+.chess-square.dark {
+  background-color: #b58863;
+}
+
+.chess-square:hover {
+  opacity: 0.8;
+}
+
+.chess-square.selected {
+  background-color: #baca44 !important;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.chess-square.valid-move::after {
+  content: '';
+  width: 20px;
+  height: 20px;
+  background: rgba(0, 255, 0, 0.4);
+  border-radius: 50%;
+  position: absolute;
+}
+
+.chess-square.valid-capture::after {
+  content: '';
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(255, 0, 0, 0.5);
+  border-radius: 50%;
+  position: absolute;
+}
+
+.chess-square.in-check {
+  background-color: #ff6b6b !important;
+  animation: chess-pulse 1s infinite;
+}
+
+.chess-square.last-move {
+  background-color: rgba(255, 255, 0, 0.5) !important;
+}
+
+/* 체스 기물 스타일 */
+.chess-piece {
+  pointer-events: none;
+  transition: transform 0.15s ease;
+}
+
+/* 기물 호버 효과 */
+.chess-square:hover .chess-piece {
+  transform: scale(1.05);
+}
+
+/* 선택된 기물 강조 */
+.chess-square.selected .chess-piece {
+  transform: scale(1.1);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+/* 체스 프로모션 모달 */
+.chess-promotion-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.chess-promotion-modal.active {
+  display: flex;
+}
+
+.chess-promotion-content {
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.chess-promotion-content h2 {
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.chess-promotion-content p {
+  margin-bottom: 20px;
+  color: #666;
+}
+
+/* 체스 프로모션 */
+.promotion-pieces {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.promotion-piece {
+  font-size: 4em;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 10px;
+  transition: all 0.3s;
+}
+
+.promotion-piece:hover {
+  background: #f0f0f0;
+  transform: scale(1.1);
+}
+
+@keyframes chess-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* 반응형 체스 보드 */
+@media (max-width: 768px) {
+  .chess-board {
+    grid-template-columns: repeat(8, 50px);
+    grid-template-rows: repeat(8, 50px);
+  }
+
+  .chess-square {
+    width: 50px;
+    height: 50px;
+    font-size: 2em;
+  }
+
+  .chess-square.valid-move::after {
+    width: 15px;
+    height: 15px;
+  }
+
+  .chess-square.valid-capture::after {
+    width: 40px;
+    height: 40px;
+  }
+}
