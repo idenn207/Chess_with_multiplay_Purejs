@@ -956,7 +956,7 @@ h3 {
 }
 
 /* 테트리스 모드에서 불필요한 UI 요소 숨기기 */
-.container.tetris-fullscreen > *:not(#gameArea) {
+.container.tetris-fullscreen > *:not(#gameArea):not(.game-overlay) {
   display: none !important;
 }
 

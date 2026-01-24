@@ -111,7 +111,6 @@ class WebRTCManager {
   setupConnectionHandlers() {
     this.peerConnection.onconnectionstatechange = () => {
       const state = this.peerConnection.connectionState;
-      console.log('Connection state:', state);
 
       if (state === 'connected') {
         this.connected = true;
@@ -123,20 +122,17 @@ class WebRTCManager {
     };
 
     this.peerConnection.oniceconnectionstatechange = () => {
-      console.log('ICE connection state:', this.peerConnection.iceConnectionState);
     };
   }
 
   // 데이터 채널 핸들러 설정
   setupDataChannelHandlers() {
     this.dataChannel.onopen = () => {
-      console.log('Data channel opened');
       this.connected = true;
       if (this.onConnected) this.onConnected();
     };
 
     this.dataChannel.onclose = () => {
-      console.log('Data channel closed');
       this.connected = false;
       if (this.onDisconnected) this.onDisconnected();
     };
@@ -146,12 +142,10 @@ class WebRTCManager {
         const data = JSON.parse(event.data);
         if (this.onMessage) this.onMessage(data);
       } catch (e) {
-        console.error('Failed to parse message:', e);
       }
     };
 
     this.dataChannel.onerror = (error) => {
-      console.error('Data channel error:', error);
     };
   }
 
@@ -161,7 +155,6 @@ class WebRTCManager {
       this.dataChannel.send(JSON.stringify(message));
       return true;
     }
-    console.warn('Data channel not ready');
     return false;
   }
 

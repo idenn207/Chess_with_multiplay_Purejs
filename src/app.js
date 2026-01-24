@@ -50,14 +50,12 @@ class MultiGameApp {
   setupWebRTCCallbacks() {
     // 연결 성공
     this.webrtc.onConnected = () => {
-      console.log('WebRTC Connected!');
       this.signalingUI.showConnected();
       this.onPeerConnected();
     };
 
     // 연결 끊김
     this.webrtc.onDisconnected = () => {
-      console.log('WebRTC Disconnected');
       this.showOverlay('연결이 끊어졌습니다');
     };
 
@@ -165,11 +163,10 @@ class MultiGameApp {
     });
     document.querySelector(`[data-game-id="${gameId}"]`).classList.add('selected');
 
-    // 게임 초기화
-    this.game = gameRegistry.createGame(gameId, 'server');
-    this.renderer = gameRegistry.createRenderer(gameId, this.game, this.elements.boardContainer, (moveData) => this.handleLocalMove(moveData));
-    this.renderer.onMoveStart = () => this.handleMoveStart();
-    this.renderer.initialize();
+    // 게임 및 렌더러 초기화
+    const { game, renderer } = this.initializeRenderer(gameId, 'server');
+    this.game = game;
+    this.renderer = renderer;
 
     // UI 업데이트
     document.getElementById('selectedGameName').textContent = config.name;
@@ -202,7 +199,6 @@ class MultiGameApp {
       // Signaling UI 표시
       this.signalingUI.showHostMode(offerSdp);
     } catch (e) {
-      console.error('Failed to create offer:', e);
       alert('연결 코드 생성 실패: ' + e.message);
     }
   }
@@ -217,50 +213,75 @@ class MultiGameApp {
     this.signalingUI.showClientMode();
   }
 
+  // 헬퍼: Renderer 초기화
+  initializeRenderer(gameId, role) {
+    const game = gameRegistry.createGame(gameId, role);
+    const renderer = gameRegistry.createRenderer(
+      gameId,
+      game,
+      this.elements.boardContainer,
+      (moveData) => this.handleLocalMove(moveData)
+    );
+    renderer.onMoveStart = () => this.handleMoveStart();
+    renderer.initialize();
+    return { game, renderer };
+  }
+
+  // 헬퍼: 타이머 초기화 및 시작
+  initializeAndStartTimer() {
+    this.myTime = this.turnTimeLimit;
+    this.opponentTime = this.turnTimeLimit;
+    this.updateMyTimerDisplay();
+    this.updateOpponentTimerDisplay();
+    this.updateCurrentTurn();
+    this.updateTurnIndicators();
+    this.startTimer();
+  }
+
+  // 헬퍼: 연결 상태 업데이트
+  updateConnectionStatus() {
+    const statusIndicator = document.getElementById('statusIndicator');
+    const serverStatus = document.getElementById('serverStatus');
+    statusIndicator.classList.remove('waiting');
+    statusIndicator.classList.add('ready');
+    serverStatus.textContent = '상대방 연결됨!';
+  }
+
+  // 헬퍼: 게임 정보 전송
+  sendGameInfo() {
+    this.webrtc.send({
+      type: 'gameInfo',
+      data: {
+        gameId: this.gameId,
+        gameState: this.game.getGameState(),
+      },
+    });
+  }
+
   // 연결 성공 시 호출
   onPeerConnected() {
-    // Data channel이 준비되지 않았으면 대기 (data channel open 시 다시 호출됨)
+    // Data channel이 준비되지 않았으면 대기
     if (!this.webrtc.dataChannel || this.webrtc.dataChannel.readyState !== 'open') {
-      console.log('[App] Data channel not ready yet, waiting...');
       return;
     }
 
     // 중복 호출 방지
     if (this.peerConnected) {
-      console.log('[App] onPeerConnected already called, skipping');
       return;
     }
     this.peerConnected = true;
-
-    console.log('[App] Data channel ready, processing connection');
-
-    const statusIndicator = document.getElementById('statusIndicator');
-    const serverStatus = document.getElementById('serverStatus');
 
     // 게임 집중 모드 활성화
     setTimeout(() => {
       this.elements.container.classList.add('game-focused');
     }, 500);
 
-    // 실시간 게임 (테트리스)인 경우 - host만 처리
-    // client는 gameId가 아직 없으므로 initClientGame에서 처리
+    // 실시간 게임 (테트리스)
     if (this.gameId) {
       const config = gameRegistry.get(this.gameId);
       if (config && config.isRealtime) {
-        statusIndicator.classList.remove('waiting');
-        statusIndicator.classList.add('ready');
-        serverStatus.textContent = '상대방 연결됨!';
-
-        console.log('[App] Sending gameInfo to client');
-
-        // 클라이언트에게 게임 정보 전송
-        this.webrtc.send({
-          type: 'gameInfo',
-          data: {
-            gameId: this.gameId,
-            gameState: this.game.getGameState(),
-          },
-        });
+        this.updateConnectionStatus();
+        this.sendGameInfo();
 
         // 준비 모달 표시
         if (this.renderer && typeof this.renderer.onConnectionEstablished === 'function') {
@@ -270,36 +291,13 @@ class MultiGameApp {
       }
     }
 
-    // 턴 기반 게임 (체스, 오목 등)인 경우
+    // 턴 기반 게임 (체스, 오목 등)
     if (this.role === 'server') {
-      statusIndicator.classList.remove('waiting');
-      statusIndicator.classList.add('ready');
-      serverStatus.textContent = '상대방 연결됨!';
-
+      this.updateConnectionStatus();
       document.getElementById('resignBtn').disabled = false;
-
-      // 타이머 초기화
-      this.myTime = this.turnTimeLimit;
-      this.opponentTime = this.turnTimeLimit;
-      this.updateMyTimerDisplay();
-      this.updateOpponentTimerDisplay();
-
-      this.updateCurrentTurn();
-      this.updateTurnIndicators();
-
-      // 타이머 시작 (서버가 선공)
-      this.startTimer();
-
-      // 클라이언트에게 게임 정보 전송
-      this.webrtc.send({
-        type: 'gameInfo',
-        data: {
-          gameId: this.gameId,
-          gameState: this.game.getGameState(),
-        },
-      });
+      this.initializeAndStartTimer();
+      this.sendGameInfo();
     } else {
-      // 클라이언트는 gameInfo 메시지 대기
       this.elements.connectionPanel.classList.remove('active');
     }
   }
@@ -314,18 +312,31 @@ class MultiGameApp {
         break;
 
       case 'move':
-        this.stopTimer();
-        // 상대방이 움직였으므로 상대방 타이머 리셋
-        this.opponentTime = this.turnTimeLimit;
-        this.updateOpponentTimerDisplay();
+        // 실시간 게임(Tetris)인지 확인
+        const config = gameRegistry.get(this.gameId);
+        const isRealtime = config && config.isRealtime;
+
+        // 턴 기반 게임만 타이머 처리
+        if (!isRealtime) {
+          this.stopTimer();
+          // 상대방이 움직였으므로 상대방 타이머 리셋
+          this.opponentTime = this.turnTimeLimit;
+          this.updateOpponentTimerDisplay();
+        }
 
         this.renderer.updateFromMove(data);
-        this.updateCurrentTurn();
-        this.updateTurnIndicators();
 
-        if (data.gameOver) {
+        // 턴 기반 게임만 턴 업데이트
+        if (!isRealtime) {
+          this.updateCurrentTurn();
+          this.updateTurnIndicators();
+        }
+
+        // 턴 기반 게임만 여기서 게임 오버 처리
+        // 실시간 게임(Tetris)은 updateFromMove()에서 onMove() 콜백을 통해 처리함
+        if (data.gameOver && !isRealtime) {
           this.handleGameOver(data.winner, data.reason);
-        } else {
+        } else if (!isRealtime) {
           this.startTimer();
         }
         break;
@@ -361,7 +372,6 @@ class MultiGameApp {
   initClientGame(data) {
     // 중복 초기화 방지
     if (this.renderer) {
-      console.log('[App] initClientGame called but renderer already exists, skipping');
       return;
     }
 
@@ -369,52 +379,34 @@ class MultiGameApp {
     this.gameId = gameId;
     const config = gameRegistry.get(gameId);
 
-    console.log('[App] Initializing client game:', gameId);
-
-    // 게임 초기화
-    this.game = gameRegistry.createGame(gameId, 'client');
+    // 게임 및 렌더러 초기화
+    const { game, renderer } = this.initializeRenderer(gameId, 'client');
+    this.game = game;
+    this.renderer = renderer;
     this.game.applyMove(gameState);
-
-    this.renderer = gameRegistry.createRenderer(gameId, this.game, this.elements.boardContainer, (moveData) => this.handleLocalMove(moveData));
-    this.renderer.onMoveStart = () => this.handleMoveStart();
-    this.renderer.initialize();
 
     // UI 업데이트
     document.getElementById('currentGameName').textContent = config.name;
     document.getElementById('myColor').textContent = config.clientLabel;
-
     this.elements.gameArea.classList.add('active');
-
     document.getElementById('newGameBtn').style.display = 'none';
 
-    // 게임 집중 모드 활성화 (클라이언트용)
+    // 게임 집중 모드 활성화
     setTimeout(() => {
       this.elements.container.classList.add('game-focused');
     }, 300);
 
-    // 실시간 게임 (테트리스)인 경우
+    // 실시간 게임 (테트리스)
     if (config.isRealtime) {
-      // 준비 모달 표시
       if (this.renderer && typeof this.renderer.onConnectionEstablished === 'function') {
         this.renderer.onConnectionEstablished();
       }
       return;
     }
 
-    // 턴 기반 게임 (체스, 오목 등)인 경우
+    // 턴 기반 게임 (체스, 오목 등)
     document.getElementById('resignBtn').disabled = false;
-
-    // 타이머 초기화
-    this.myTime = this.turnTimeLimit;
-    this.opponentTime = this.turnTimeLimit;
-    this.updateMyTimerDisplay();
-    this.updateOpponentTimerDisplay();
-
-    this.updateCurrentTurn();
-    this.updateTurnIndicators();
-
-    // 타이머 시작
-    this.startTimer();
+    this.initializeAndStartTimer();
   }
 
   // 이동 시작 시 호출 (애니메이션 시작 전)
@@ -426,8 +418,16 @@ class MultiGameApp {
   handleLocalMove(moveData) {
     this.movePending = false;
     this.webrtc.send({ type: 'move', data: moveData });
-    this.updateCurrentTurn();
-    this.updateTurnIndicators();
+
+    // 실시간 게임(Tetris)인지 확인
+    const config = gameRegistry.get(this.gameId);
+    const isRealtime = config && config.isRealtime;
+
+    // 턴 기반 게임만 턴 업데이트
+    if (!isRealtime) {
+      this.updateCurrentTurn();
+      this.updateTurnIndicators();
+    }
 
     if (moveData.gameOver) {
       this.handleGameOver(moveData.winner, moveData.reason);
@@ -446,7 +446,15 @@ class MultiGameApp {
   }
 
   handleGameOver(winner, reason) {
-    this.stopTimer();
+    // 실시간 게임(Tetris)인지 확인
+    const config = gameRegistry.get(this.gameId);
+    const isRealtime = config && config.isRealtime;
+
+    // 턴 기반 게임만 타이머 정지
+    if (!isRealtime) {
+      this.stopTimer();
+    }
+
     this.game.gameOver = true;
     document.getElementById('resignBtn').disabled = true;
     document.getElementById('newGameBtn').style.display = '';
@@ -467,8 +475,11 @@ class MultiGameApp {
       message = 'DEFEAT';
     }
 
+    // 게임별 특수 메시지
     if (reason === 'checkmate') message = 'CHECKMATE!';
     if (reason === 'five_in_a_row') message = 'WINNER!';
+    if (reason === 'block_out') message = winner === this.game.myColor ? 'WINNER!' : 'GAME OVER';
+    if (reason === 'opponent_out') message = 'WINNER!';
 
     this.showOverlay(message);
   }
@@ -500,14 +511,8 @@ class MultiGameApp {
 
     // 내 차례인지 확인
     const isMyTurn = this.game.currentTurn === this.game.myColor;
-
-    if (isMyTurn) {
-      this.elements.turnIndicatorLeft.classList.add('active');
-      this.elements.turnIndicatorRight.classList.remove('active');
-    } else {
-      this.elements.turnIndicatorLeft.classList.remove('active');
-      this.elements.turnIndicatorRight.classList.add('active');
-    }
+    this.elements.turnIndicatorLeft.classList.toggle('active', isMyTurn);
+    this.elements.turnIndicatorRight.classList.toggle('active', !isMyTurn);
   }
 
   newGame() {
@@ -621,12 +626,8 @@ class MultiGameApp {
 
   // 보드 선택 상태 초기화
   clearBoardSelection() {
-    if (this.game.selectedSquare) {
-      this.game.selectedSquare = null;
-    }
-    if (this.game.validMoves) {
-      this.game.validMoves = [];
-    }
+    this.game.selectedSquare = null;
+    this.game.validMoves = [];
     if (this.renderer && this.renderer.render) {
       this.renderer.render();
     }

@@ -365,14 +365,7 @@ class TetrisGame {
 
     // Single-pass 알고리즘: 완성되지 않은 줄만 수집
     const completeSet = new Set(clearedLines);
-    const newBoard = [];
-
-    // 위에서부터 완성되지 않은 줄만 수집
-    for (let y = 0; y < TETRIS_BOARD_HEIGHT + TETRIS_BUFFER_HEIGHT; y++) {
-      if (!completeSet.has(y)) {
-        newBoard.push(this.board[y]);
-      }
-    }
+    const newBoard = this.board.filter((_, y) => !completeSet.has(y));
 
     // 위에 빈 줄 추가
     while (newBoard.length < TETRIS_BOARD_HEIGHT + TETRIS_BUFFER_HEIGHT) {
@@ -405,27 +398,21 @@ class TetrisGame {
   }
   
   isPerfectClear() {
-    for (let y = TETRIS_BUFFER_HEIGHT; y < TETRIS_BOARD_HEIGHT + TETRIS_BUFFER_HEIGHT; y++) {
-      if (this.board[y].some(cell => cell !== null)) return false;
-    }
-    return true;
+    return !this.board.slice(TETRIS_BUFFER_HEIGHT).some(row => row.some(cell => cell !== null));
   }
   
   receiveGarbage(lines) {
     const before = this.pendingGarbage;
     this.pendingGarbage = Math.min(this.pendingGarbage + lines, 20);
-    console.log('[Tetris Game] receiveGarbage:', lines, 'before:', before, 'after:', this.pendingGarbage);
   }
   cancelGarbage(attack) {
     const c = Math.min(this.pendingGarbage, attack);
     this.pendingGarbage -= c;
-    console.log('[Tetris Game] cancelGarbage - attack:', attack, 'cancelled:', c, 'remaining pendingGarbage:', this.pendingGarbage);
     return attack - c;
   }
   
   applyPendingGarbage() {
     if (this.pendingGarbage === 0) return;
-    console.log('[Tetris Game] Applying garbage! Lines:', this.pendingGarbage);
     const holeX = Math.floor(Math.random() * TETRIS_BOARD_WIDTH);
     for (let i = 0; i < this.pendingGarbage; i++) {
       this.board.shift();
@@ -433,7 +420,6 @@ class TetrisGame {
       garbageLine[holeX] = null;
       this.board.push(garbageLine);
     }
-    console.log('[Tetris Game] Garbage applied, pendingGarbage reset to 0');
     this.pendingGarbage = 0;
   }
   

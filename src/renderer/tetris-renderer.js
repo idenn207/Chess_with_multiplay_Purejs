@@ -58,7 +58,6 @@ class TetrisRenderer {
   }
   
   initialize() {
-    console.log('[Tetris] initialize called');
     this.createUI();
     this.setupEventListeners();
     this.render();
@@ -67,13 +66,9 @@ class TetrisRenderer {
     document.querySelector('.container').classList.add('tetris-active');
     document.querySelector('.container').classList.add('tetris-fullscreen');
     document.body.classList.add('tetris-mode');
-
-    console.log('[Tetris] Fullscreen mode activated');
-    // 준비 모달은 WebRTC 연결 완료 후에 표시됨
   }
   
   createUI() {
-    console.log('[Tetris] createUI called');
     this.wrapper = document.createElement('div');
     this.wrapper.className = 'tetris-wrapper';
     
@@ -161,14 +156,8 @@ class TetrisRenderer {
   }
   
   createStartModal() {
-    console.log('[Tetris] createStartModal called, existing modal:', !!this.startModal);
-    // 이미 모달이 있으면 재생성하지 않음
-    if (this.startModal) {
-      console.log('[Tetris] Modal already exists, skipping creation');
-      return;
-    }
-
-    console.log('[Tetris] Creating new modal');
+    // Early return: 이미 모달이 있으면 재생성하지 않음
+    if (this.startModal) return;
     this.startModal = document.createElement('div');
     this.startModal.className = 'tetris-start-modal';
     this.startModal.innerHTML = `
@@ -197,31 +186,19 @@ class TetrisRenderer {
     });
   }
   
-  showStartButton() {
-    this.showStartModal();
-  }
-
-  showWaitingMessage() {
-    this.showStartModal();
-  }
-
   onConnectionEstablished() {
     // WebRTC 연결 완료 시 호출됨
-    console.log('[Tetris] onConnectionEstablished called');
-    console.log('[Tetris] startModal exists:', !!this.startModal);
-
     // 준비 모달 표시
     this.showStartModal();
   }
 
   handleReadyClick() {
-    console.log('[Tetris] handleReadyClick called, isReady:', this.isReady);
-    if (this.isReady) return; // 이미 준비됨
+    // Early return: 이미 준비된 경우
+    if (this.isReady) return;
 
     this.isReady = true;
     this.updateReadyStatus();
 
-    console.log('[Tetris] Sending ready message');
     // 상대에게 준비 메시지 전송
     this.onMove({
       tetrisType: 'ready',
@@ -236,9 +213,6 @@ class TetrisRenderer {
     const myStatus = document.getElementById('myReadyStatus');
     const opponentStatus = document.getElementById('opponentReadyStatus');
 
-    console.log('[Tetris] updateReadyStatus - myStatus:', myStatus, 'opponentStatus:', opponentStatus);
-    console.log('[Tetris] isReady:', this.isReady, 'opponentReady:', this.opponentReady);
-
     if (myStatus) myStatus.textContent = this.isReady ? '✅' : '❌';
     if (opponentStatus) opponentStatus.textContent = this.opponentReady ? '✅' : '❌';
 
@@ -251,37 +225,32 @@ class TetrisRenderer {
   }
 
   checkBothReady() {
-    console.log('[Tetris] checkBothReady - isReady:', this.isReady, 'opponentReady:', this.opponentReady, 'gameStarted:', this.gameStarted, 'myColor:', this.game.myColor);
-    if (this.isReady && this.opponentReady && !this.gameStarted) {
-      // Host만 게임 시작 트리거
-      // Client는 start 메시지를 기다림
-      if (this.game.myColor === 'player1') {
-        console.log('[Tetris] Host triggering game start in 500ms');
-        setTimeout(() => {
-          this.startGame();
-        }, 500); // 시각적 피드백을 위한 약간의 지연
-      } else {
-        console.log('[Tetris] Client waiting for start message from host');
-      }
+    // 조건을 변수로 추출하여 가독성 향상
+    const bothPlayersReady = this.isReady && this.opponentReady;
+    const canStartGame = bothPlayersReady && !this.gameStarted;
+    const isHost = this.game.myColor === 'player1';
+
+    // Early return: 게임 시작 조건 불충족
+    if (!canStartGame) return;
+
+    // Host만 게임 시작 트리거 (Client는 start 메시지를 기다림)
+    if (isHost) {
+      setTimeout(() => {
+        this.startGame();
+      }, 500); // 시각적 피드백을 위한 약간의 지연
     }
   }
 
   startGame() {
-    console.log('[Tetris] startGame called, gameStarted:', this.gameStarted);
-    // 중복 호출 방지
-    if (this.gameStarted) {
-      console.log('[Tetris] Game already started, returning');
-      return;
-    }
+    // Early return: 중복 호출 방지
+    if (this.gameStarted) return;
 
     this.gameStarted = true;
     const seed = Date.now();
 
-    console.log('[Tetris] Initializing game with seed:', seed);
     this.game.initialize(seed);
 
     // Client에게 시작 메시지 전송
-    console.log('[Tetris] Sending start message to client');
     this.onMove({
       tetrisType: 'start',
       seed: seed,
@@ -289,28 +258,21 @@ class TetrisRenderer {
     });
 
     this.hideStartModal();
-    console.log('[Tetris] Starting game loop');
     this.startGameLoop();
   }
   
   showStartModal() {
-    console.log('[Tetris] showStartModal called');
     if (this.startModal) {
       this.startModal.classList.add('active');
       this.startModal.style.display = 'flex';
-      console.log('[Tetris] Modal shown');
-    } else {
-      console.error('[Tetris] startModal is null!');
     }
   }
 
   hideStartModal() {
-    console.log('[Tetris] hideStartModal called');
     if (this.startModal) {
       this.startModal.classList.remove('active');
       // 확실하게 숨기기 위해 display도 직접 설정
       this.startModal.style.display = 'none';
-      console.log('[Tetris] Modal hidden');
     }
   }
   
@@ -320,10 +282,12 @@ class TetrisRenderer {
   }
   
   handleKeyDown(e) {
+    // Early return: 게임이 시작되지 않았거나 게임 오버 상태
     if (!this.game.isStarted || this.game.gameOver) return;
-    
-    // 중복 키 방지
+
+    // Early return: 중복 키 방지
     if (this.keyState[e.code]) return;
+
     this.keyState[e.code] = true;
     
     switch (e.code) {
@@ -399,17 +363,21 @@ class TetrisRenderer {
   
   handleHardDrop() {
     const result = this.game.hardDrop();
-    if (result) {
-      if (result.type === 'gameOver') {
-        this.handleGameOver();
-      } else if (result.attack > 0) {
-        this.sendAttack(result.attack);
-      }
+
+    // Early return: 결과가 없으면 종료
+    if (!result) return;
+
+    if (result.type === 'gameOver') {
+      this.handleGameOver();
+      return;
+    }
+
+    if (result.attack > 0) {
+      this.sendAttack(result.attack);
     }
   }
   
   sendAttack(lines) {
-    console.log('[Tetris] Sending attack to opponent, lines:', lines);
     this.onMove({
       tetrisType: 'attack',
       attack: lines,
@@ -436,12 +404,14 @@ class TetrisRenderer {
   }
   
   startGameLoop() {
+    // Early return: 이미 실행 중이면 중복 시작 방지
     if (this.isRunning) return;
+
     this.isRunning = true;
     this.lastTime = performance.now();
     this.dropAccumulator = 0;
     this.animationId = requestAnimationFrame(this.gameLoop);
-    
+
     // 상태 동기화 시작
     this.syncInterval = setInterval(() => {
       this.sendState();
@@ -535,40 +505,32 @@ class TetrisRenderer {
       }
     }
     
-    // 고스트 피스
+    // 고스트 피스 + 현재 피스 (조건 통합)
     if (this.game.currentType && !this.game.gameOver) {
-      const ghostY = this.game.getGhostY();
       const shape = this.game.getShape();
       const color = TETROMINOS[this.game.currentType].color;
-      
+      const ghostY = this.game.getGhostY();
+
+      // 고스트 피스 렌더링
       ctx.globalAlpha = 0.3;
       for (let py = 0; py < shape.length; py++) {
         for (let px = 0; px < shape[py].length; px++) {
           if (shape[py][px]) {
             const bx = this.game.position.x + px;
             const by = ghostY + py - TETRIS_BUFFER_HEIGHT;
-            if (by >= 0) {
-              this.drawBlock(ctx, bx, by, color, cellSize);
-            }
+            if (by >= 0) this.drawBlock(ctx, bx, by, color, cellSize);
           }
         }
       }
+
+      // 현재 피스 렌더링
       ctx.globalAlpha = 1;
-    }
-    
-    // 현재 피스
-    if (this.game.currentType && !this.game.gameOver) {
-      const shape = this.game.getShape();
-      const color = TETROMINOS[this.game.currentType].color;
-      
       for (let py = 0; py < shape.length; py++) {
         for (let px = 0; px < shape[py].length; px++) {
           if (shape[py][px]) {
             const bx = this.game.position.x + px;
             const by = this.game.position.y + py - TETRIS_BUFFER_HEIGHT;
-            if (by >= 0) {
-              this.drawBlock(ctx, bx, by, color, cellSize);
-            }
+            if (by >= 0) this.drawBlock(ctx, bx, by, color, cellSize);
           }
         }
       }
@@ -691,12 +653,7 @@ class TetrisRenderer {
     // 가비지 바 (왼쪽에서 오른쪽으로 채움)
     const garbageFill = this.myPanel.querySelector('.my-garbage');
     const garbagePercent = (this.game.pendingGarbage / 20) * 100;
-    if (this.game.pendingGarbage > 0) {
-      console.log('[Tetris] Garbage update - pending:', this.game.pendingGarbage, 'percent:', garbagePercent, 'element:', garbageFill);
-    }
-    if (garbageFill) {
-      garbageFill.style.width = garbagePercent + '%';
-    }
+    garbageFill.style.width = garbagePercent + '%';
 
     // 상대방 통계
     if (this.game.opponentState) {
@@ -707,11 +664,8 @@ class TetrisRenderer {
   }
   
   updateFromMove(moveData) {
-    console.log('[Tetris] updateFromMove called, type:', moveData.tetrisType);
-
     // 준비 상태 메시지
     if (moveData.tetrisType === 'ready') {
-      console.log('[Tetris] Received ready message, ready:', moveData.ready);
       this.opponentReady = moveData.ready;
       this.updateReadyStatus();
       this.checkBothReady();
@@ -720,28 +674,16 @@ class TetrisRenderer {
 
     // 게임 시작 메시지 (client가 host로부터 받음)
     if (moveData.tetrisType === 'start') {
-      console.log('[Tetris] Received start message, seed:', moveData.seed);
       // gameStarted 체크 제거 - 항상 처리
       this.gameStarted = true;
       this.game.initialize(moveData.seed);
       this.hideStartModal();
-      console.log('[Tetris] Client starting game loop');
       this.startGameLoop();
       return;
     }
 
-    // Attack 메시지 디버깅
-    if (moveData.tetrisType === 'attack') {
-      console.log('[Tetris] Received attack message, attack:', moveData.attack, 'before pendingGarbage:', this.game.pendingGarbage);
-    }
-
     // 일반 상태 업데이트
     this.game.applyMove(moveData);
-
-    // Attack 후 상태 확인
-    if (moveData.tetrisType === 'attack') {
-      console.log('[Tetris] After applyMove, pendingGarbage:', this.game.pendingGarbage);
-    }
     
     // 상대방 게임 오버 시 내가 승리
     if (moveData.tetrisType === 'gameOver' || moveData.gameOver) {
@@ -770,7 +712,7 @@ class TetrisRenderer {
     document.body.classList.remove('tetris-mode');
 
     // 모든 키 타이머 정리
-    for (const key of Object.keys(this.keyTimers)) {
+    for (const key in this.keyTimers) {
       if (key.endsWith('_interval')) {
         clearInterval(this.keyTimers[key]);
       } else {
