@@ -30,6 +30,14 @@ class JanggiRenderer {
     this.onMoveStart = null; // 이동 시작 콜백 (타임아웃 race condition 방지용)
     this.isRotated = false; // 보드 회전 여부
     this.rotated = '';
+
+    // 포진 선택 관련 상태
+    this.formationModal = null;
+    this.myFormation = null;
+    this.opponentFormation = null;
+    this.isFormationReady = false;
+    this.gameStarted = false;
+    this.onGameStart = null; // 게임 시작 콜백 (타이머 시작용)
   }
 
   initialize() {
@@ -311,10 +319,223 @@ class JanggiRenderer {
     }
   }
 
+  // ========== 포진 선택 관련 메서드 ==========
+
+  /**
+   * 연결 완료 시 호출 (포진 선택 모달 표시)
+   */
+  onConnectionEstablished() {
+    this.showFormationModal();
+  }
+
+  /**
+   * 포진 선택 모달 생성
+   */
+  createFormationModal() {
+    if (this.formationModal) return;
+
+    const myColorLabel = this.game.myColor === 'cho' ? '초 (빨강)' : '한 (파랑)';
+
+    this.formationModal = document.createElement('div');
+    this.formationModal.className = 'janggi-formation-modal';
+    this.formationModal.innerHTML = `
+      <div class="formation-content">
+        <h2>포진 선택</h2>
+        <p class="formation-message">${myColorLabel} - 마상 배치를 선택하세요</p>
+
+        <div class="formation-options">
+          <button class="formation-btn" data-formation="masang">
+            <div class="formation-preview masang"></div>
+            <span>마상마상</span>
+            <small>양쪽 馬-象</small>
+          </button>
+          <button class="formation-btn" data-formation="sangma">
+            <div class="formation-preview sangma"></div>
+            <span>상마상마</span>
+            <small>양쪽 象-馬</small>
+          </button>
+          <button class="formation-btn" data-formation="gwima-left">
+            <div class="formation-preview gwima-left"></div>
+            <span>마상상마</span>
+            <small>왼쪽 馬-象, 오른쪽 象-馬</small>
+          </button>
+          <button class="formation-btn" data-formation="gwima-right">
+            <div class="formation-preview gwima-right"></div>
+            <span>상마마상</span>
+            <small>왼쪽 象-馬, 오른쪽 馬-象</small>
+          </button>
+        </div>
+
+        <div class="ready-status">
+          <span class="ready-indicator">나: <span id="janggiMyReadyStatus">❌</span></span>
+          <span class="ready-indicator">상대: <span id="janggiOpponentReadyStatus">❌</span></span>
+        </div>
+
+        <p class="waiting-message" id="formationWaitingMessage" style="display:none;">
+          상대방 선택을 기다리는 중...
+        </p>
+      </div>
+    `;
+    document.body.appendChild(this.formationModal);
+
+    // 포진 버튼 이벤트
+    this.formationModal.querySelectorAll('.formation-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.handleFormationSelect(btn.dataset.formation);
+      });
+    });
+  }
+
+  /**
+   * 포진 선택 처리
+   */
+  handleFormationSelect(formation) {
+    if (this.isFormationReady) return;
+
+    this.myFormation = formation;
+    this.isFormationReady = true;
+
+    // 선택된 버튼 스타일 변경
+    this.formationModal.querySelectorAll('.formation-btn').forEach((btn) => {
+      btn.classList.remove('selected');
+      btn.disabled = true;
+    });
+    this.formationModal.querySelector(`[data-formation="${formation}"]`).classList.add('selected');
+
+    // 상태 업데이트
+    this.updateFormationReadyStatus();
+
+    // 상대에게 포진 선택 메시지 전송
+    this.onMove({
+      janggiType: 'formation',
+      formation: formation,
+    });
+
+    // 양쪽 모두 선택 완료인지 확인
+    this.checkBothFormationsReady();
+  }
+
+  /**
+   * 준비 상태 UI 업데이트
+   */
+  updateFormationReadyStatus() {
+    const myStatus = document.getElementById('janggiMyReadyStatus');
+    const opponentStatus = document.getElementById('janggiOpponentReadyStatus');
+    const waitingMessage = document.getElementById('formationWaitingMessage');
+
+    if (myStatus) myStatus.textContent = this.isFormationReady ? '✅' : '❌';
+    if (opponentStatus) opponentStatus.textContent = this.opponentFormation ? '✅' : '❌';
+
+    if (this.isFormationReady && !this.opponentFormation && waitingMessage) {
+      waitingMessage.style.display = 'block';
+    }
+  }
+
+  /**
+   * 양쪽 모두 선택 완료 확인
+   */
+  checkBothFormationsReady() {
+    const bothReady = this.isFormationReady && this.opponentFormation;
+    const canStart = bothReady && !this.gameStarted;
+    const isHost = this.game.myColor === 'cho'; // 호스트 = 초 (서버)
+
+    if (!canStart) return;
+
+    if (isHost) {
+      setTimeout(() => {
+        this.startGameWithFormations();
+      }, 500);
+    }
+  }
+
+  /**
+   * 포진 적용 후 게임 시작 (호스트만 호출)
+   */
+  startGameWithFormations() {
+    if (this.gameStarted) return;
+
+    this.gameStarted = true;
+
+    // 포진 적용 (호스트 = 초)
+    const choFormation = this.myFormation;
+    const hanFormation = this.opponentFormation;
+
+    this.game.applyFormations(choFormation, hanFormation);
+
+    // 클라이언트에게 게임 시작 메시지 전송
+    this.onMove({
+      janggiType: 'start',
+      choFormation: choFormation,
+      hanFormation: hanFormation,
+      board: this.game.board,
+      gameOver: false,
+    });
+
+    this.hideFormationModal();
+    this.render();
+
+    // 게임 시작 콜백 (타이머 시작)
+    if (this.onGameStart) {
+      this.onGameStart();
+    }
+  }
+
+  /**
+   * 포진 모달 표시
+   */
+  showFormationModal() {
+    this.createFormationModal();
+    if (this.formationModal) {
+      this.formationModal.classList.add('active');
+      this.formationModal.style.display = 'flex';
+    }
+  }
+
+  /**
+   * 포진 모달 숨기기
+   */
+  hideFormationModal() {
+    if (this.formationModal) {
+      this.formationModal.classList.remove('active');
+      this.formationModal.style.display = 'none';
+    }
+  }
+
+  // ========== 기존 메서드 ==========
+
   /**
    * 상대방 이동 반영 (애니메이션 포함)
    */
   updateFromMove(moveData) {
+    // 포진 선택 메시지 처리
+    if (moveData.janggiType === 'formation') {
+      this.opponentFormation = moveData.formation;
+      this.updateFormationReadyStatus();
+      this.checkBothFormationsReady();
+      return;
+    }
+
+    // 게임 시작 메시지 처리 (클라이언트가 호스트로부터 받음)
+    if (moveData.janggiType === 'start') {
+      this.gameStarted = true;
+
+      // 클라이언트 관점에서 포진 설정 (나 = 한, 상대 = 초)
+      const hanFormation = this.myFormation;
+      const choFormation = this.opponentFormation;
+
+      this.game.applyFormations(choFormation, hanFormation);
+      this.game.board = moveData.board; // 호스트가 보낸 최종 보드 사용
+
+      this.hideFormationModal();
+      this.render();
+
+      // 게임 시작 콜백 (타이머 시작)
+      if (this.onGameStart) {
+        this.onGameStart();
+      }
+      return;
+    }
+
     // 마지막 이동 정보가 있으면 애니메이션 실행
     if (moveData.lastMove && this.game.lastMove) {
       const prevLastMove = this.game.lastMove;
@@ -427,6 +648,9 @@ class JanggiRenderer {
   cleanup() {
     if (this.boardElement) {
       this.boardElement.remove();
+    }
+    if (this.formationModal) {
+      this.formationModal.remove();
     }
   }
 }

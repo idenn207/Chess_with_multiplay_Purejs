@@ -258,3 +258,229 @@
     border-width: 3px;
   }
 }
+
+/* ========== 포진 선택 모달 ========== */
+
+.janggi-formation-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.janggi-formation-modal.active {
+  display: flex;
+}
+
+.formation-content {
+  background: linear-gradient(135deg, #2c1810 0%, #1a0f0a 100%);
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  border: 3px solid #8b6914;
+  box-shadow: 0 0 40px rgba(139, 105, 20, 0.4);
+  max-width: 550px;
+  width: 90%;
+}
+
+.formation-content h2 {
+  font-size: 2.2em;
+  color: #e8c878;
+  margin-bottom: 10px;
+  text-shadow: 0 0 20px rgba(232, 200, 120, 0.5);
+}
+
+.formation-message {
+  color: #ccc;
+  margin-bottom: 25px;
+  font-size: 1.1em;
+}
+
+/* 포진 옵션 그리드 */
+.formation-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.formation-btn {
+  background: linear-gradient(145deg, #3d2817, #2a1a10);
+  border: 2px solid #5d4e37;
+  border-radius: 12px;
+  padding: 18px 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.formation-btn:hover:not(:disabled) {
+  transform: translateY(-3px);
+  border-color: #8b6914;
+  box-shadow: 0 5px 20px rgba(139, 105, 20, 0.3);
+}
+
+.formation-btn.selected {
+  border-color: #ffd700;
+  background: linear-gradient(145deg, #4d3827, #3a2a1a);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+.formation-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.formation-btn:disabled:not(.selected) {
+  filter: grayscale(0.5);
+}
+
+.formation-btn span {
+  font-size: 1.15em;
+  font-weight: bold;
+  color: #e8c878;
+}
+
+.formation-btn small {
+  font-size: 0.8em;
+  color: #999;
+}
+
+/* 포진 미리보기 */
+.formation-preview {
+  width: 140px;
+  height: 36px;
+  background: linear-gradient(145deg, #e8c878, #d4b567);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 15px;
+  font-size: 1.2em;
+  font-weight: bold;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.formation-preview::before,
+.formation-preview::after {
+  font-family: 'Noto Serif KR', serif;
+}
+
+/* 마상마상: 馬-象 | 馬-象 */
+.formation-preview.masang::before {
+  content: '馬象';
+  color: #c0392b;
+}
+.formation-preview.masang::after {
+  content: '馬象';
+  color: #c0392b;
+}
+
+/* 상마상마: 象-馬 | 象-馬 */
+.formation-preview.sangma::before {
+  content: '象馬';
+  color: #c0392b;
+}
+.formation-preview.sangma::after {
+  content: '象馬';
+  color: #c0392b;
+}
+
+/* 마상상마: 馬-象 | 象-馬 */
+.formation-preview.gwima-left::before {
+  content: '馬象';
+  color: #c0392b;
+}
+.formation-preview.gwima-left::after {
+  content: '象馬';
+  color: #c0392b;
+}
+
+/* 상마마상: 象-馬 | 馬-象 */
+.formation-preview.gwima-right::before {
+  content: '象馬';
+  color: #c0392b;
+}
+.formation-preview.gwima-right::after {
+  content: '馬象';
+  color: #c0392b;
+}
+
+/* 준비 상태 */
+.formation-content .ready-status {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin: 20px 0;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+}
+
+.formation-content .ready-indicator {
+  font-size: 1.2em;
+  color: #fff;
+  font-weight: bold;
+}
+
+.waiting-message {
+  color: #ffd700;
+  font-style: italic;
+  margin-top: 10px;
+  animation: pulse-text 1.5s infinite;
+}
+
+@keyframes pulse-text {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* 반응형 - 포진 모달 */
+@media (max-width: 600px) {
+  .formation-content {
+    padding: 25px 15px;
+    margin: 10px;
+  }
+
+  .formation-content h2 {
+    font-size: 1.6em;
+  }
+
+  .formation-options {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .formation-btn {
+    padding: 15px 10px;
+  }
+
+  .formation-preview {
+    width: 120px;
+    height: 32px;
+    font-size: 1em;
+    padding: 0 10px;
+  }
+
+  .formation-content .ready-status {
+    gap: 20px;
+    padding: 12px;
+  }
+
+  .formation-content .ready-indicator {
+    font-size: 1em;
+  }
+}

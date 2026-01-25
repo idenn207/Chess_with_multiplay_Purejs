@@ -392,6 +392,24 @@ class MultiGameApp {
       }
     }
 
+    // 장기: 포진 선택 필요
+    if (this.gameId === 'janggi') {
+      this.updateConnectionStatus();
+      this.sendGameInfo();
+
+      // 게임 시작 콜백 설정 (포진 선택 완료 후 타이머 시작)
+      this.renderer.onGameStart = () => {
+        document.getElementById('resignBtn').disabled = false;
+        this.initializeAndStartTimer();
+      };
+
+      // 포진 선택 모달 표시
+      if (this.renderer && typeof this.renderer.onConnectionEstablished === 'function') {
+        this.renderer.onConnectionEstablished();
+      }
+      return; // 포진 선택 완료 후 게임 시작
+    }
+
     // 턴 기반 게임 (체스, 오목 등)
     if (this.role === 'server') {
       this.updateConnectionStatus();
@@ -416,6 +434,12 @@ class MultiGameApp {
         // 실시간 게임(Tetris)인지 확인
         const config = gameRegistry.get(this.gameId);
         const isRealtime = config && config.isRealtime;
+
+        // 장기 포진 선택/시작 메시지는 별도 처리 (타이머 X)
+        if (data.janggiType) {
+          this.renderer.updateFromMove(data);
+          break;
+        }
 
         // 턴 기반 게임만 타이머 처리
         if (!isRealtime) {
@@ -503,6 +527,20 @@ class MultiGameApp {
         this.renderer.onConnectionEstablished();
       }
       return;
+    }
+
+    // 장기: 포진 선택 필요
+    if (gameId === 'janggi') {
+      // 게임 시작 콜백 설정 (포진 선택 완료 후 타이머 시작)
+      this.renderer.onGameStart = () => {
+        document.getElementById('resignBtn').disabled = false;
+        this.initializeAndStartTimer();
+      };
+
+      if (this.renderer && typeof this.renderer.onConnectionEstablished === 'function') {
+        this.renderer.onConnectionEstablished();
+      }
+      return; // 포진 선택 완료 후 게임 시작
     }
 
     // 턴 기반 게임 (체스, 오목 등)

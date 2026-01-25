@@ -1,3 +1,11 @@
+// 장기 포진 상수
+const JANGGI_FORMATIONS = {
+  masang: { name: '마상마상', left: ['n', 'e'], right: ['n', 'e'] },
+  sangma: { name: '상마상마', left: ['e', 'n'], right: ['e', 'n'] },
+  'gwima-left': { name: '마상상마', left: ['n', 'e'], right: ['e', 'n'] },
+  'gwima-right': { name: '상마마상', left: ['e', 'n'], right: ['n', 'e'] },
+};
+
 // 장기 게임 로직
 class JanggiGame {
   constructor() {
@@ -9,6 +17,41 @@ class JanggiGame {
     this.gameOver = false;
     this.lastMove = null;
     this.moveHistory = [];
+
+    // 포진 관련 상태
+    this.choFormation = null;
+    this.hanFormation = null;
+    this.formationsReady = false;
+  }
+
+  /**
+   * 포진 적용
+   * @param {string} choFormation - 초의 포진 ID
+   * @param {string} hanFormation - 한의 포진 ID
+   */
+  applyFormations(choFormation, hanFormation) {
+    this.choFormation = choFormation;
+    this.hanFormation = hanFormation;
+
+    // 초(빨강) row 9 적용
+    const choConfig = JANGGI_FORMATIONS[choFormation];
+    if (choConfig) {
+      this.board[9][1] = choConfig.left[0].toUpperCase(); // col 1
+      this.board[9][2] = choConfig.left[1].toUpperCase(); // col 2
+      this.board[9][6] = choConfig.right[0].toUpperCase(); // col 6
+      this.board[9][7] = choConfig.right[1].toUpperCase(); // col 7
+    }
+
+    // 한(파랑) row 0 적용
+    const hanConfig = JANGGI_FORMATIONS[hanFormation];
+    if (hanConfig) {
+      this.board[0][1] = hanConfig.left[0]; // col 1
+      this.board[0][2] = hanConfig.left[1]; // col 2
+      this.board[0][6] = hanConfig.right[0]; // col 6
+      this.board[0][7] = hanConfig.right[1]; // col 7
+    }
+
+    this.formationsReady = true;
   }
 
   // 초기 보드 설정 (9x10)
@@ -645,6 +688,9 @@ class JanggiGame {
       currentTurn: this.currentTurn,
       lastMove: this.lastMove,
       gameOver: this.gameOver,
+      choFormation: this.choFormation,
+      hanFormation: this.hanFormation,
+      formationsReady: this.formationsReady,
     };
   }
 
@@ -653,5 +699,8 @@ class JanggiGame {
     this.currentTurn = moveData.currentTurn;
     this.lastMove = moveData.lastMove || null;
     this.gameOver = moveData.gameOver || false;
+    this.choFormation = moveData.choFormation || null;
+    this.hanFormation = moveData.hanFormation || null;
+    this.formationsReady = moveData.formationsReady || false;
   }
 }
