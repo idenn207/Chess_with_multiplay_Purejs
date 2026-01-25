@@ -144,6 +144,11 @@ class ChessRenderer {
     // 애니메이션 중이면 클릭 무시
     if (this.isAnimating) return;
 
+    // 싱글플레이 모드: AI 턴이면 클릭 무시
+    if (this.game.myColor && this.game.currentTurn !== this.game.myColor) {
+      return;
+    }
+
     if (this.game.currentTurn !== this.game.myColor || this.game.gameOver) {
       return;
     }

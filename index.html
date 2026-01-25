@@ -17,6 +17,42 @@
   <div class="container">
     <h1 id="pageTitle">🎮 LAN Multi Game</h1>
 
+    <!-- 게임 모드 선택 -->
+    <div class="mode-selection" id="modeSelection">
+      <h2>게임 모드 선택</h2>
+      <div class="mode-buttons">
+        <button class="mode-btn" data-mode="singleplayer">
+          <span class="icon">🤖</span>
+          <span class="title">싱글플레이</span>
+          <span class="desc">AI와 대전합니다</span>
+        </button>
+        <button class="mode-btn" data-mode="multiplayer">
+          <span class="icon">🌐</span>
+          <span class="title">멀티플레이</span>
+          <span class="desc">네트워크로 대전합니다</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 난이도 선택 -->
+    <div class="difficulty-selection" id="difficultySelection">
+      <h2>난이도 선택</h2>
+      <div class="difficulty-buttons">
+        <button class="difficulty-btn" data-difficulty="easy">
+          <span class="icon">😊</span>
+          <span>쉬움</span>
+        </button>
+        <button class="difficulty-btn" data-difficulty="medium">
+          <span class="icon">😐</span>
+          <span>중간</span>
+        </button>
+        <button class="difficulty-btn" data-difficulty="hard">
+          <span class="icon">😈</span>
+          <span>어려움</span>
+        </button>
+      </div>
+    </div>
+
     <!-- 역할 선택 -->
     <div class="role-selection" id="roleSelection">
       <h2>역할 선택</h2>
@@ -124,6 +160,11 @@
   <script src="src/game/gomoku.js"></script>
   <script src="src/game/janggi.js"></script>
   <script src="src/game/tetris.js"></script>
+
+  <!-- AI 엔진 (싱글플레이용) -->
+  <script src="src/ai/piece-square-tables.js"></script>
+  <script src="src/ai/chess-evaluator.js"></script>
+  <script src="src/ai/chess-ai.js"></script>
 
   <!-- 렌더러 -->
   <script src="src/renderer/chess-renderer.js"></script>

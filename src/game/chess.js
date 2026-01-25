@@ -468,4 +468,70 @@ class ChessGame {
       lastMove: this.lastMove,
     };
   }
+
+  // AI 헬퍼 메서드
+
+  /**
+   * 특정 색상의 모든 합법적인 수 반환
+   * @param {string} color - 'white' 또는 'black'
+   * @returns {Array} [{from: [r, c], to: [r, c], piece: string, capturedPiece: string|null}]
+   */
+  getAllLegalMoves(color) {
+    const moves = [];
+
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const piece = this.board[row][col];
+        if (piece && this.getPieceColor(piece) === color) {
+          const possibleMoves = this.getPossibleMoves(row, col);
+          possibleMoves.forEach(([toRow, toCol]) => {
+            moves.push({
+              from: [row, col],
+              to: [toRow, toCol],
+              piece: piece,
+              capturedPiece: this.board[toRow][toCol],
+            });
+          });
+        }
+      }
+    }
+
+    return moves;
+  }
+
+  /**
+   * 게임 상태 깊은 복사
+   * @returns {ChessGame} 복사된 게임 인스턴스
+   */
+  cloneGame() {
+    const clone = new ChessGame();
+    clone.board = this.board.map((row) => [...row]);
+    clone.currentTurn = this.currentTurn;
+    clone.castlingRights = JSON.parse(JSON.stringify(this.castlingRights));
+    clone.enPassantTarget = this.enPassantTarget ? [...this.enPassantTarget] : null;
+    clone.kingPositions = {
+      white: [...this.kingPositions.white],
+      black: [...this.kingPositions.black],
+    };
+    clone.gameOver = this.gameOver;
+    clone.myColor = this.myColor;
+    return clone;
+  }
+
+  /**
+   * 기물 가치 반환
+   * @param {string} piece - 기물 문자
+   * @returns {number} 기물 가치 (센티폰 단위)
+   */
+  getPieceValue(piece) {
+    const values = {
+      p: 100, // 폰
+      n: 320, // 나이트
+      b: 330, // 비숍
+      r: 500, // 룩
+      q: 900, // 퀸
+      k: 20000, // 킹
+    };
+    return values[piece.toLowerCase()] || 0;
+  }
 }
