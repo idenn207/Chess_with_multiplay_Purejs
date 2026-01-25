@@ -448,7 +448,32 @@ class TetrisGame {
   
   getGravity() { return GRAVITY_TABLE[Math.min(this.level - 1, GRAVITY_TABLE.length - 1)]; }
   getNextPieces(count = 5) { return this.randomizer ? this.randomizer.peek(count) : []; }
-  
+
+  /**
+   * 최고 기록 저장 (localStorage)
+   * @returns {boolean} 신기록 여부
+   */
+  saveHighScore() {
+    const current = { score: this.score, lines: this.lines, level: this.level };
+    const saved = localStorage.getItem('tetris_highscore');
+    const best = saved ? JSON.parse(saved) : { score: 0, lines: 0, level: 1 };
+
+    if (current.score > best.score) {
+      localStorage.setItem('tetris_highscore', JSON.stringify(current));
+      return true; // 신기록!
+    }
+    return false;
+  }
+
+  /**
+   * 최고 기록 로드 (localStorage)
+   * @returns {Object} { score, lines, level }
+   */
+  static loadHighScore() {
+    const saved = localStorage.getItem('tetris_highscore');
+    return saved ? JSON.parse(saved) : { score: 0, lines: 0, level: 1 };
+  }
+
   getGameState() {
     return {
       board: this.board, currentType: this.currentType, position: this.position, rotation: this.rotation,

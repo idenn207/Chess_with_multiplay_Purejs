@@ -12,35 +12,36 @@ class TetrisRenderer {
     this.container = container;
     this.onMove = onMove;
     this.onMoveStart = null;
-    
+
     // 캔버스
     this.myCanvas = null;
     this.myCtx = null;
     this.opponentCanvas = null;
     this.opponentCtx = null;
-    
+
     // UI 요소
     this.wrapper = null;
     this.myPanel = null;
     this.opponentPanel = null;
     this.startModal = null;
-    
+    this.modeModal = null;
+
     // 게임 루프
     this.animationId = null;
     this.lastTime = 0;
     this.dropAccumulator = 0;
     this.isRunning = false;
-    
+
     // DAS/ARR (지연 자동 반복)
     this.das = 133; // ms
     this.arr = 10;  // ms
     this.keyState = {};
     this.keyTimers = {};
-    
+
     // 렌더링 설정
     this.cellSize = 28;
     this.miniCellSize = 18;
-    
+
     // 상태 동기화 간격
     this.syncInterval = null;
     this.lastSyncTime = 0;
@@ -50,6 +51,11 @@ class TetrisRenderer {
     this.isReady = false;
     this.opponentReady = false;
     this.gameStarted = false;
+
+    // 싱글플레이어 모드
+    this.singlePlayerMode = null; // 'record' or 'ai'
+    this.ai = null; // TetrisAI 인스턴스
+    this.aiSyncInterval = null;
 
     // 바운드 메서드
     this.handleKeyDown = this.handleKeyDown.bind(this);
@@ -405,21 +411,6 @@ class TetrisRenderer {
     });
   }
   
-  startGameLoop() {
-    // Early return: 이미 실행 중이면 중복 시작 방지
-    if (this.isRunning) return;
-
-    this.isRunning = true;
-    this.lastTime = performance.now();
-    this.dropAccumulator = 0;
-    this.animationId = requestAnimationFrame(this.gameLoop);
-
-    // 상태 동기화 시작
-    this.syncInterval = setInterval(() => {
-      this.sendState();
-    }, this.syncRate);
-  }
-  
   stopGameLoop() {
     this.isRunning = false;
     if (this.animationId) {
@@ -719,6 +710,7 @@ class TetrisRenderer {
   cleanup() {
     this.stopGameLoop();
     this.resetReadyState();
+    this.stopAI();
     document.removeEventListener('keydown', this.handleKeyDown);
     document.removeEventListener('keyup', this.handleKeyUp);
 
@@ -736,8 +728,459 @@ class TetrisRenderer {
       }
     }
 
+    if (this.modeModal) {
+      this.modeModal.remove();
+      this.modeModal = null;
+    }
+
     if (this.wrapper) {
       this.wrapper.remove();
+    }
+  }
+
+  // ============== 싱글플레이어 모드 관련 메서드 ==============
+
+  /**
+   * 모드 선택 화면 표시 (싱글플레이어 전용)
+   * @param {Function} onModeSelected - 모드 선택 콜백 (mode: 'record' | 'ai')
+   */
+  showModeSelection(onModeSelected) {
+    this.createModeModal(onModeSelected);
+  }
+
+  /**
+   * 모드 선택 모달 생성
+   */
+  createModeModal(onModeSelected) {
+    if (this.modeModal) {
+      this.modeModal.remove();
+    }
+
+    const highScore = TetrisGame.loadHighScore();
+
+    this.modeModal = document.createElement('div');
+    this.modeModal.className = 'tetris-mode-modal active';
+    this.modeModal.innerHTML = `
+      <div class="mode-content">
+        <h2>🧱 TETRIS</h2>
+        <p class="mode-message">플레이 모드를 선택하세요</p>
+        <div class="tetris-mode-buttons">
+          <button class="tetris-mode-btn" data-mode="record">
+            <span class="mode-icon">🏆</span>
+            <span class="mode-title">기록 모드</span>
+            <span class="mode-desc">최고 기록에 도전하세요</span>
+            <span class="mode-highscore">최고: ${highScore.score.toLocaleString()}점</span>
+          </button>
+          <button class="tetris-mode-btn" data-mode="ai">
+            <span class="mode-icon">🤖</span>
+            <span class="mode-title">AI 대전</span>
+            <span class="mode-desc">AI와 1:1 대결</span>
+          </button>
+        </div>
+        <div class="controls-info">
+          <div class="control-row"><span class="key">←→</span> 이동</div>
+          <div class="control-row"><span class="key">↑</span> 시계방향 회전</div>
+          <div class="control-row"><span class="key">Z</span> 반시계방향 회전</div>
+          <div class="control-row"><span class="key">↓</span> 소프트 드롭</div>
+          <div class="control-row"><span class="key">Space</span> 하드 드롭</div>
+          <div class="control-row"><span class="key">C</span> 홀드</div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(this.modeModal);
+
+    // 모드 버튼 클릭 이벤트
+    this.modeModal.querySelectorAll('.tetris-mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.mode;
+        this.hideModeModal();
+        onModeSelected(mode);
+      });
+    });
+  }
+
+  /**
+   * 모드 선택 모달 숨기기
+   */
+  hideModeModal() {
+    if (this.modeModal) {
+      this.modeModal.classList.remove('active');
+      this.modeModal.style.display = 'none';
+    }
+  }
+
+  /**
+   * 기록 모드 시작
+   */
+  startRecordMode() {
+    this.singlePlayerMode = 'record';
+
+    // UI 재구성 (상대 패널 숨김)
+    this.wrapper.classList.add('record-mode');
+    if (this.opponentPanel) {
+      this.opponentPanel.style.display = 'none';
+    }
+
+    // 가비지 바 숨기기 (솔로 플레이에서는 불필요)
+    const garbageSection = this.myPanel.querySelector('.tetris-garbage');
+    if (garbageSection) {
+      garbageSection.style.display = 'none';
+    }
+
+    // 최고 기록 표시 추가
+    this.addHighScoreDisplay();
+
+    // 게임 시작
+    const seed = Date.now();
+    this.game.initialize(seed);
+    this.gameStarted = true;
+    this.startGameLoop();
+  }
+
+  /**
+   * 최고 기록 표시 추가
+   */
+  addHighScoreDisplay() {
+    const highScore = TetrisGame.loadHighScore();
+    const statsSection = this.myPanel.querySelector('.tetris-stats');
+
+    // 이미 있으면 제거
+    const existing = statsSection.querySelector('.best-stat');
+    if (existing) existing.remove();
+
+    const bestStat = document.createElement('div');
+    bestStat.className = 'stat best-stat';
+    bestStat.innerHTML = `
+      <span class="stat-label">BEST</span>
+      <span class="stat-value best-score">${highScore.score.toLocaleString()}</span>
+    `;
+    statsSection.appendChild(bestStat);
+  }
+
+  /**
+   * AI 대전 모드 시작
+   * @param {TetrisAI} ai - TetrisAI 인스턴스
+   */
+  startAIMode(ai) {
+    this.singlePlayerMode = 'ai';
+    this.ai = ai;
+
+    // 상대 패널 라벨 변경
+    const opponentLabel = this.opponentPanel.querySelector('.player-label');
+    if (opponentLabel) {
+      opponentLabel.textContent = 'AI';
+    }
+
+    // 동일 시드로 양쪽 게임 시작
+    const seed = Date.now();
+
+    // 플레이어 게임 초기화
+    this.game.initialize(seed);
+
+    // AI 게임 초기화 및 콜백 설정
+    this.ai.onAttack = (lines) => {
+      // AI가 공격하면 플레이어가 가비지 수신
+      this.game.receiveGarbage(lines);
+    };
+
+    this.ai.onStateUpdate = (state) => {
+      // AI 상태를 상대방 상태로 설정
+      this.game.opponentState = state;
+    };
+
+    this.ai.onGameOver = () => {
+      // AI 게임 오버 = 플레이어 승리
+      this.game.opponentState = { ...this.game.opponentState, gameOver: true };
+      this.handleSinglePlayerGameOver(true);
+    };
+
+    this.ai.initialize(seed);
+
+    // AI 상태 동기화 시작
+    this.startAISyncLoop();
+
+    this.gameStarted = true;
+    this.startGameLoop();
+  }
+
+  /**
+   * AI 상태 동기화 루프
+   */
+  startAISyncLoop() {
+    this.aiSyncInterval = setInterval(() => {
+      if (this.ai && !this.ai.game.gameOver) {
+        this.game.opponentState = this.ai.getStateForPlayer();
+      }
+    }, 100);
+  }
+
+  /**
+   * AI 중지
+   */
+  stopAI() {
+    if (this.ai) {
+      this.ai.stop();
+      this.ai = null;
+    }
+    if (this.aiSyncInterval) {
+      clearInterval(this.aiSyncInterval);
+      this.aiSyncInterval = null;
+    }
+  }
+
+  /**
+   * 싱글플레이어 하드 드롭 처리 (오버라이드)
+   */
+  handleHardDropSinglePlayer() {
+    const result = this.game.hardDrop();
+    if (!result) return;
+
+    if (result.type === 'gameOver') {
+      this.handleSinglePlayerGameOver(false);
+      return;
+    }
+
+    // AI 모드에서 공격 처리
+    if (this.singlePlayerMode === 'ai' && result.attack > 0 && this.ai) {
+      this.ai.receiveGarbage(result.attack);
+    }
+  }
+
+  /**
+   * 싱글플레이어 게임 오버 처리
+   * @param {boolean} isWin - 승리 여부
+   */
+  handleSinglePlayerGameOver(isWin) {
+    this.stopGameLoop();
+    this.stopAI();
+
+    // 기록 모드: 최고 기록 저장
+    if (this.singlePlayerMode === 'record') {
+      const isNewRecord = this.game.saveHighScore();
+
+      // 신기록 달성 시 BEST 표시 업데이트
+      if (isNewRecord) {
+        this.updateHighScoreDisplay();
+      }
+
+      this.onMove({
+        gameOver: true,
+        winner: 'none',
+        reason: isNewRecord ? 'new_record' : 'block_out',
+        isNewRecord: isNewRecord,
+        score: this.game.score
+      });
+    } else {
+      // AI 모드
+      this.onMove({
+        gameOver: true,
+        winner: isWin ? this.game.myColor : 'ai',
+        reason: isWin ? 'opponent_out' : 'block_out'
+      });
+    }
+  }
+
+  /**
+   * 최고 기록 표시 업데이트
+   */
+  updateHighScoreDisplay() {
+    const highScore = TetrisGame.loadHighScore();
+    const bestScoreEl = this.myPanel.querySelector('.best-score');
+    if (bestScoreEl) {
+      bestScoreEl.textContent = highScore.score.toLocaleString();
+      bestScoreEl.classList.add('new-record');
+    }
+  }
+
+  /**
+   * 싱글플레이어 게임 재시작
+   * @param {TetrisAI} [ai] - AI 대전 모드일 경우 AI 인스턴스
+   */
+  restartSinglePlayer(ai = null) {
+    // 기존 게임 루프 및 AI 정지
+    this.stopGameLoop();
+    this.stopAI();
+
+    // 게임 상태 리셋
+    this.game.gameOver = false;
+    this.gameStarted = false;
+
+    // new-record 클래스 제거
+    const bestScoreEl = this.myPanel.querySelector('.best-score');
+    if (bestScoreEl) {
+      bestScoreEl.classList.remove('new-record');
+    }
+
+    // 키 상태 초기화
+    this.keyState = {};
+
+    if (this.singlePlayerMode === 'record') {
+      // 기록 모드: 최고 기록 표시 업데이트
+      this.addHighScoreDisplay();
+
+      // 게임 재시작
+      const seed = Date.now();
+      this.game.initialize(seed);
+      this.gameStarted = true;
+      this.startGameLoop();
+    } else if (this.singlePlayerMode === 'ai' && ai) {
+      // AI 대전 모드
+      this.ai = ai;
+
+      const seed = Date.now();
+      this.game.initialize(seed);
+
+      // AI 콜백 재설정
+      this.ai.onAttack = (lines) => {
+        this.game.receiveGarbage(lines);
+      };
+
+      this.ai.onStateUpdate = (state) => {
+        this.game.opponentState = state;
+      };
+
+      this.ai.onGameOver = () => {
+        this.game.opponentState = { ...this.game.opponentState, gameOver: true };
+        this.handleSinglePlayerGameOver(true);
+      };
+
+      this.ai.initialize(seed);
+      this.startAISyncLoop();
+
+      this.gameStarted = true;
+      this.startGameLoop();
+    }
+  }
+
+  /**
+   * 싱글플레이어 게임 루프 (락 피스 처리 수정)
+   */
+  singlePlayerGameLoop(currentTime) {
+    if (!this.isRunning) return;
+
+    const deltaTime = currentTime - this.lastTime;
+    this.lastTime = currentTime;
+
+    // 자동 낙하
+    if (this.game.isStarted && !this.game.gameOver) {
+      this.dropAccumulator += deltaTime;
+      const gravity = this.game.getGravity();
+
+      while (this.dropAccumulator >= gravity) {
+        this.dropAccumulator -= gravity;
+        if (!this.game.softDrop()) {
+          // 바닥에 닿음 - 락 딜레이 후 고정
+          this.dropAccumulator = 0;
+          const result = this.game.lockPiece();
+          if (result) {
+            if (result.type === 'gameOver') {
+              this.handleSinglePlayerGameOver(false);
+              return;
+            } else if (result.attack > 0 && this.singlePlayerMode === 'ai' && this.ai) {
+              this.ai.receiveGarbage(result.attack);
+            }
+          }
+        }
+      }
+    }
+
+    this.render();
+    this.animationId = requestAnimationFrame(this.singlePlayerMode ? this.singlePlayerGameLoop.bind(this) : this.gameLoop);
+  }
+
+  /**
+   * 싱글플레이어용 게임 루프 시작
+   */
+  startGameLoopSinglePlayer() {
+    if (this.isRunning) return;
+
+    this.isRunning = true;
+    this.lastTime = performance.now();
+    this.dropAccumulator = 0;
+    this.animationId = requestAnimationFrame(this.singlePlayerGameLoop.bind(this));
+  }
+
+  /**
+   * 싱글플레이어 키 다운 핸들러 (오버라이드)
+   */
+  handleKeyDownSinglePlayer(e) {
+    if (!this.game.isStarted || this.game.gameOver) return;
+    if (this.keyState[e.code]) return;
+
+    this.keyState[e.code] = true;
+
+    switch (e.code) {
+      case 'ArrowLeft':
+        this.game.move(-1, 0);
+        this.startKeyRepeat('ArrowLeft', () => this.game.move(-1, 0));
+        e.preventDefault();
+        break;
+      case 'ArrowRight':
+        this.game.move(1, 0);
+        this.startKeyRepeat('ArrowRight', () => this.game.move(1, 0));
+        e.preventDefault();
+        break;
+      case 'ArrowDown':
+        this.game.softDrop();
+        this.startKeyRepeat('ArrowDown', () => this.game.softDrop(), 50);
+        e.preventDefault();
+        break;
+      case 'ArrowUp':
+        this.game.rotate(1);
+        e.preventDefault();
+        break;
+      case 'KeyZ':
+        this.game.rotate(-1);
+        e.preventDefault();
+        break;
+      case 'KeyX':
+        this.game.rotate(1);
+        e.preventDefault();
+        break;
+      case 'Space':
+        this.handleHardDropSinglePlayer();
+        e.preventDefault();
+        break;
+      case 'KeyC':
+      case 'ShiftLeft':
+        this.game.hold();
+        e.preventDefault();
+        break;
+    }
+  }
+
+  /**
+   * 싱글플레이어 이벤트 리스너 설정
+   */
+  setupSinglePlayerEventListeners() {
+    // 기존 리스너 제거 (initialize()에서 설정된 멀티플레이 리스너)
+    document.removeEventListener('keydown', this.handleKeyDown);
+    document.removeEventListener('keyup', this.handleKeyUp);
+
+    // 싱글플레이어용 핸들러로 교체
+    this.handleKeyDown = this.handleKeyDownSinglePlayer.bind(this);
+    document.addEventListener('keydown', this.handleKeyDown);
+    document.addEventListener('keyup', this.handleKeyUp);
+  }
+
+  /**
+   * 싱글플레이어 게임 루프 시작 (startGameLoop 대체)
+   */
+  startGameLoop() {
+    if (this.isRunning) return;
+
+    this.isRunning = true;
+    this.lastTime = performance.now();
+    this.dropAccumulator = 0;
+
+    if (this.singlePlayerMode) {
+      this.animationId = requestAnimationFrame(this.singlePlayerGameLoop.bind(this));
+    } else {
+      this.animationId = requestAnimationFrame(this.gameLoop);
+      // 멀티플레이어용 상태 동기화
+      this.syncInterval = setInterval(() => {
+        this.sendState();
+      }, this.syncRate);
     }
   }
 }

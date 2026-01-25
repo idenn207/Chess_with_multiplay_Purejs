@@ -260,6 +260,12 @@ class MultiGameApp {
       return;
     }
 
+    // 테트리스: 모드 선택 UI 표시
+    if (gameId === 'tetris') {
+      this.startTetrisSinglePlayer(gameId, config, spConfig);
+      return;
+    }
+
     // 게임 및 렌더러 초기화
     const { game, renderer } = this.initializeRenderer(gameId, 'server');
     this.game = game;
@@ -300,6 +306,44 @@ class MultiGameApp {
     document.getElementById('resignBtn').disabled = false;
     this.updateCurrentTurn();
     this.updateTurnIndicators();
+  }
+
+  /**
+   * 테트리스 싱글플레이어 시작 (모드 선택 포함)
+   */
+  startTetrisSinglePlayer(gameId, config, spConfig) {
+    // 게임 및 렌더러 초기화
+    const { game, renderer } = this.initializeRenderer(gameId, 'server');
+    this.game = game;
+    this.renderer = renderer;
+    this.game.myColor = spConfig.playerColor;
+
+    // UI 업데이트
+    document.getElementById('currentGameName').textContent = config.name;
+    document.getElementById('myColor').textContent = spConfig.playerLabel;
+    this.elements.gameSelection.classList.remove('active');
+    this.elements.gameArea.classList.add('active');
+    document.getElementById('newGameBtn').style.display = 'none';
+    document.getElementById('resignBtn').disabled = true;
+
+    // 집중 모드 활성화
+    this.elements.container.classList.add('game-focused');
+
+    // 모드 선택 모달 표시
+    this.renderer.showModeSelection((mode) => {
+      this.tetrisSinglePlayerMode = mode;
+
+      if (mode === 'record') {
+        // 기록 모드: AI 없이 솔로 플레이
+        this.renderer.setupSinglePlayerEventListeners();
+        this.renderer.startRecordMode();
+      } else {
+        // AI 대전 모드
+        this.ai = gameRegistry.createAI(gameId, this.difficulty);
+        this.renderer.setupSinglePlayerEventListeners();
+        this.renderer.startAIMode(this.ai);
+      }
+    });
   }
 
   async startServer() {
@@ -675,6 +719,16 @@ class MultiGameApp {
     if (reason === 'block_out') message = winner === this.game.myColor ? 'WINNER!' : 'GAME OVER';
     if (reason === 'opponent_out') message = 'WINNER!';
 
+    // 테트리스 기록 모드 특수 메시지
+    if (reason === 'new_record') {
+      message = '🎉 NEW RECORD!';
+    }
+
+    // 테트리스 싱글플레이 AI 모드
+    if (winner === 'ai') {
+      message = 'DEFEAT';
+    }
+
     this.showOverlay(message);
   }
 
@@ -715,10 +769,35 @@ class MultiGameApp {
       // 양쪽 모두 새게임 요청 가능
       this.webrtc.send({ type: 'newGameRequest' });
       this.showOverlay('새 게임 준비 중...');
+    } else if (this.gameMode === 'singleplayer' && this.gameId === 'tetris') {
+      // 테트리스 싱글플레이: 페이지 리로드 없이 재시작
+      this.restartTetrisSinglePlayer();
     } else {
-      // 싱글플레이어 또는 연결 끊긴 경우
+      // 다른 싱글플레이어 게임 또는 연결 끊긴 경우
       this.cleanup();
       location.reload();
+    }
+  }
+
+  /**
+   * 테트리스 싱글플레이어 재시작
+   */
+  restartTetrisSinglePlayer() {
+    // 오버레이 닫기
+    this.elements.gameOverlay.classList.remove('active');
+
+    // 게임 오버 상태 해제
+    this.game.gameOver = false;
+    document.getElementById('resignBtn').disabled = true;
+    document.getElementById('newGameBtn').style.display = 'none';
+
+    if (this.tetrisSinglePlayerMode === 'ai') {
+      // AI 대전 모드: 새 AI 인스턴스 생성
+      this.ai = gameRegistry.createAI(this.gameId, this.difficulty);
+      this.renderer.restartSinglePlayer(this.ai);
+    } else {
+      // 기록 모드: AI 없이 재시작
+      this.renderer.restartSinglePlayer();
     }
   }
 

@@ -44,7 +44,9 @@ class GameRegistry {
    */
   supportsSinglePlayer(gameId) {
     const config = this.get(gameId);
-    return config && config.singlePlayer && config.singlePlayer.aiClass;
+    if (!config || !config.singlePlayer) return false;
+    // 테트리스는 modes 배열로 판단, 다른 게임은 aiClass로 판단
+    return config.singlePlayer.modes || config.singlePlayer.aiClass;
   }
 
   /**
@@ -191,5 +193,13 @@ gameRegistry.register({
   serverLabel: 'Player 1',
   clientLabel: 'Player 2',
   getTurnLabel: (color) => color === 'player1' ? 'P1' : 'P2',
-  isRealtime: true
+  isRealtime: true,
+
+  // 싱글플레이 설정
+  singlePlayer: {
+    aiClass: TetrisAI,
+    playerColor: 'player1',
+    playerLabel: 'YOU',
+    modes: ['record', 'ai'], // 지원 모드
+  }
 });

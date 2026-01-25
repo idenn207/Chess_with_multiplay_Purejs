@@ -428,3 +428,155 @@
     font-size: 1em;
   }
 }
+
+/* ============== 모드 선택 모달 ============== */
+.tetris-mode-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  justify-content: center;
+  align-items: center;
+  z-index: 1001;
+}
+
+.tetris-mode-modal.active {
+  display: flex;
+}
+
+.mode-content {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  border: 2px solid #667eea;
+  box-shadow: 0 0 40px rgba(102, 126, 234, 0.4);
+  max-width: 500px;
+  width: 90%;
+}
+
+.mode-content h2 {
+  font-size: 3em;
+  color: #fff;
+  margin-bottom: 15px;
+  text-shadow: 0 0 20px rgba(102, 126, 234, 0.8);
+}
+
+.mode-message {
+  color: #aaa;
+  margin-bottom: 25px;
+  font-size: 1.1em;
+}
+
+/* 모드 선택 버튼 그룹 */
+.tetris-mode-buttons {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-bottom: 25px;
+}
+
+.tetris-mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 25px 30px;
+  background: linear-gradient(135deg, #2a2a4e 0%, #1a1a2e 100%);
+  border: 2px solid #667eea;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 160px;
+  color: #fff;
+}
+
+.tetris-mode-btn:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+  border-color: #8b9fff;
+}
+
+.tetris-mode-btn .mode-icon {
+  font-size: 3em;
+  margin-bottom: 10px;
+}
+
+.tetris-mode-btn .mode-title {
+  font-size: 1.3em;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.tetris-mode-btn .mode-desc {
+  font-size: 0.85em;
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.tetris-mode-btn .mode-highscore {
+  font-size: 0.8em;
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.1);
+  padding: 4px 10px;
+  border-radius: 10px;
+  margin-top: 5px;
+}
+
+/* ============== 기록 모드 스타일 ============== */
+.tetris-wrapper.record-mode {
+  justify-content: center;
+}
+
+.tetris-wrapper.record-mode .opponent-panel {
+  display: none;
+}
+
+/* 최고 기록 통계 */
+.best-stat .stat-label {
+  color: #ffd700;
+}
+
+.best-stat .stat-value {
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+/* 신기록 애니메이션 */
+@keyframes newRecordPulse {
+  0%, 100% {
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  }
+  50% {
+    text-shadow: 0 0 30px rgba(255, 215, 0, 1);
+  }
+}
+
+.new-record {
+  animation: newRecordPulse 1s ease-in-out infinite;
+}
+
+/* 모드 선택 모달 반응형 */
+@media (max-width: 600px) {
+  .tetris-mode-buttons {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .tetris-mode-btn {
+    min-width: auto;
+    width: 100%;
+    padding: 20px;
+  }
+
+  .mode-content {
+    padding: 25px;
+    margin: 15px;
+  }
+
+  .mode-content h2 {
+    font-size: 2.5em;
+  }
+}
