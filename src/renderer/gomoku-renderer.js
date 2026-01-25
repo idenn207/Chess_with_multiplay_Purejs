@@ -159,6 +159,9 @@ class GomokuRenderer {
       winner = 'draw';
       reason = 'board_full';
       this.game.gameOver = true;
+    } else {
+      // 게임이 끝나지 않았으면 winningLine 초기화
+      this.game.winningLine = [];
     }
 
     this.game.currentTurn = color === 'black' ? 'white' : 'black';
@@ -197,7 +200,81 @@ class GomokuRenderer {
   }
 
   /**
-   * 상대방 돌 놓기 애니메이션
+   * AI 돌 놓기 애니메이션 (싱글플레이 전용)
+   * @param {number} row - 행
+   * @param {number} col - 열
+   */
+  animateAIMove(row, col) {
+    this.isAnimating = true;
+
+    // 이동 시작 알림 (타이머 정지용)
+    if (this.onMoveStart) {
+      this.onMoveStart();
+    }
+
+    const cell = this.getCellElement(row, col);
+    const aiColor = this.game.currentTurn; // AI의 현재 턴 색상
+
+    // 돌 생성 (애니메이션용)
+    const stoneDiv = document.createElement('div');
+    stoneDiv.className = `gomoku-stone ${aiColor} placing`;
+    cell.appendChild(stoneDiv);
+    cell.classList.add('has-stone');
+
+    // 애니메이션 완료 후 실제 이동 처리
+    setTimeout(() => {
+      stoneDiv.classList.remove('placing');
+      stoneDiv.classList.add('placed');
+
+      // AI 이동 실행
+      this.executeAIMove(row, col, aiColor);
+      this.isAnimating = false;
+    }, this.animationDuration);
+  }
+
+  /**
+   * AI 이동 실행 (싱글플레이 전용)
+   */
+  executeAIMove(row, col, color) {
+    this.game.placeStone(row, col, color);
+
+    let gameOver = false;
+    let winner = null;
+    let reason = null;
+
+    if (this.game.checkWin(row, col, color)) {
+      gameOver = true;
+      winner = color;
+      reason = 'five_in_a_row';
+      this.game.gameOver = true;
+    } else if (this.game.isBoardFull()) {
+      gameOver = true;
+      winner = 'draw';
+      reason = 'board_full';
+      this.game.gameOver = true;
+    } else {
+      // 게임이 끝나지 않았으면 winningLine 초기화
+      this.game.winningLine = [];
+    }
+
+    this.game.currentTurn = color === 'black' ? 'white' : 'black';
+
+    const moveData = {
+      board: this.game.board,
+      currentTurn: this.game.currentTurn,
+      gameOver,
+      winner,
+      reason,
+      winningLine: this.game.winningLine,
+      lastMove: this.game.lastMove,
+    };
+
+    this.onMove(moveData);
+    this.render();
+  }
+
+  /**
+   * 상대방 돌 놓기 애니메이션 (멀티플레이 전용)
    */
   animateOpponentStone(row, col, moveData) {
     this.isAnimating = true;

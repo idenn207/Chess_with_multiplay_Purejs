@@ -252,14 +252,20 @@ class MultiGameApp {
     const { game, renderer } = this.initializeRenderer(gameId, 'server');
     this.game = game;
     this.renderer = renderer;
-    this.game.myColor = 'white'; // 플레이어는 백
 
-    // AI 초기화
-    this.ai = new ChessAI(this.difficulty);
+    // 게임별 설정
+    if (gameId === 'chess') {
+      this.game.myColor = 'white'; // 플레이어는 백
+      this.ai = new ChessAI(this.difficulty);
+    } else if (gameId === 'gomoku') {
+      this.game.myColor = 'black'; // 플레이어는 흑 (선공)
+      this.ai = new GomokuAI(this.difficulty);
+    }
 
     // UI 업데이트
     document.getElementById('currentGameName').textContent = config.name;
-    document.getElementById('myColor').textContent = '백 (플레이어)';
+    document.getElementById('myColor').textContent =
+      gameId === 'chess' ? '백 (플레이어)' : '흑 (플레이어)';
     this.elements.gameSelection.classList.remove('active');
     this.elements.gameArea.classList.add('active');
     document.getElementById('resignBtn').disabled = false;
@@ -577,7 +583,7 @@ class MultiGameApp {
 
     // 게임별 특수 메시지
     if (reason === 'checkmate') message = 'CHECKMATE!';
-    if (reason === 'five_in_a_row') message = 'WINNER!';
+    if (reason === 'five_in_a_row') message = winner === this.game.myColor ? 'WINNER!' : 'DEFEAT';
     if (reason === 'block_out') message = winner === this.game.myColor ? 'WINNER!' : 'GAME OVER';
     if (reason === 'opponent_out') message = 'WINNER!';
 
@@ -747,12 +753,15 @@ class MultiGameApp {
     if (this.isAIMoving) {
       this.isAIMoving = false;
 
-      // 플레이어가 체크메이트/스테일메이트 상태인지 확인
-      if (this.game.isCheckmate(this.game.myColor)) {
-        this.handleGameOver('black', 'checkmate');
-      } else if (this.game.isStalemate(this.game.myColor)) {
-        this.handleGameOver('draw', 'stalemate');
+      // 체스 전용: 플레이어가 체크메이트/스테일메이트 상태인지 확인
+      if (this.gameId === 'chess') {
+        if (this.game.isCheckmate(this.game.myColor)) {
+          this.handleGameOver('black', 'checkmate');
+        } else if (this.game.isStalemate(this.game.myColor)) {
+          this.handleGameOver('draw', 'stalemate');
+        }
       }
+      // 오목은 executeMove에서 이미 게임 종료 처리
       return;
     }
 
@@ -777,14 +786,18 @@ class MultiGameApp {
       // AI 이동 플래그 설정
       this.isAIMoving = true;
 
-      const [fromRow, fromCol] = bestMove.from;
-      const [toRow, toCol] = bestMove.to;
-
       this.hideAIThinking();
 
-      // animateMove는 내부적으로 executeMove를 호출하고
-      // executeMove가 handleLocalMove 콜백을 호출합니다.
-      this.renderer.animateMove(fromRow, fromCol, toRow, toCol);
+      // 게임별 이동 형식 처리
+      if (this.gameId === 'chess') {
+        // 체스: {from: [r,c], to: [r,c]} 형식
+        const [fromRow, fromCol] = bestMove.from;
+        const [toRow, toCol] = bestMove.to;
+        this.renderer.animateMove(fromRow, fromCol, toRow, toCol);
+      } else if (this.gameId === 'gomoku') {
+        // 오목: {row, col} 형식 - AI 전용 메서드 사용
+        this.renderer.animateAIMove(bestMove.row, bestMove.col);
+      }
     }, this.aiThinkingDelay);
   }
 

@@ -292,11 +292,21 @@ class GomokuGame {
     for (const { dr, dc } of directions) {
       const line = this.getLine(row, col, dr, dc, color);
       if (line.length >= 5) {
-        // 정확히 5개인지 확인 (6목 금지)
         const extendedLine = this.getExtendedLine(row, col, dr, dc, color);
-        if (extendedLine.length === 5) {
-          this.winningLine = extendedLine;
-          return true;
+
+        // 6목 금지는 흑에게만 적용 (백은 6목도 승리)
+        if (color === 'black') {
+          // 흑: 정확히 5개인지 확인
+          if (extendedLine.length === 5) {
+            this.winningLine = extendedLine;
+            return true;
+          }
+        } else {
+          // 백: 5개 이상이면 모두 승리
+          if (extendedLine.length >= 5) {
+            this.winningLine = extendedLine.slice(0, 5); // 처음 5개만 winningLine에 저장
+            return true;
+          }
         }
       }
     }
@@ -372,5 +382,107 @@ class GomokuGame {
     this.gameOver = moveData.gameOver;
     this.winningLine = moveData.winningLine || [];
     this.lastMove = moveData.lastMove || null;
+  }
+
+  // AI 헬퍼 메서드
+
+  /**
+   * 특정 색상의 모든 가능한 수 반환 (탐색 공간 축소)
+   * @param {string} color - 'black' 또는 'white'
+   * @returns {Array} [{row, col}, ...]
+   */
+  getAllPossibleMoves(color) {
+    const moves = [];
+
+    // 첫 수는 중앙만 반환
+    if (this.moveHistory.length === 0) {
+      return [{ row: 7, col: 7 }];
+    }
+
+    // 기존 돌 주변 2칸 이내만 탐색 (탐색 공간 축소: 225개 → 평균 20-40개)
+    const candidates = new Set();
+
+    for (let r = 0; r < 15; r++) {
+      for (let c = 0; c < 15; c++) {
+        if (this.board[r][c] !== null) {
+          // 주변 2칸 추가
+          for (let dr = -2; dr <= 2; dr++) {
+            for (let dc = -2; dc <= 2; dc++) {
+              const row = r + dr;
+              const col = c + dc;
+
+              if (this.isInBounds(row, col) && this.board[row][col] === null) {
+                candidates.add(`${row},${col}`);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 유효성 검증 (금지 규칙 체크)
+    const originalTurn = this.currentTurn;
+    this.currentTurn = color;
+
+    candidates.forEach((key) => {
+      const [row, col] = key.split(',').map(Number);
+      if (this.isValidMove(row, col)) {
+        moves.push({ row, col });
+      }
+    });
+
+    this.currentTurn = originalTurn;
+    return moves;
+  }
+
+  /**
+   * 게임 상태 깊은 복사
+   * @returns {GomokuGame} 복사된 게임 인스턴스
+   */
+  cloneGame() {
+    const clone = new GomokuGame();
+    clone.board = this.board.map((row) => [...row]);
+    clone.currentTurn = this.currentTurn;
+    clone.myColor = this.myColor;
+    clone.gameOver = this.gameOver;
+    clone.moveHistory = this.moveHistory.map((m) => ({ ...m }));
+    clone.winningLine = this.winningLine.map((p) => ({ ...p }));
+    clone.lastMove = this.lastMove ? { ...this.lastMove } : null;
+    return clone;
+  }
+
+  /**
+   * 임시 수 실행 (moveHistory 갱신 안 함, AI 탐색용)
+   * @param {number} row - 행
+   * @param {number} col - 열
+   * @param {string} color - 'black' 또는 'white'
+   * @returns {boolean} 성공 여부
+   */
+  simulateMove(row, col, color) {
+    if (!this.isValidMove(row, col)) return false;
+
+    this.board[row][col] = color;
+    this.lastMove = { row, col };
+
+    if (this.checkWin(row, col, color)) {
+      this.gameOver = true;
+    } else if (this.isBoardFull()) {
+      this.gameOver = true;
+    }
+
+    return true;
+  }
+
+  /**
+   * 임시 수 취소
+   * @param {number} row - 행
+   * @param {number} col - 열
+   */
+  undoMove(row, col) {
+    this.board[row][col] = null;
+    this.gameOver = false;
+    this.winningLine = [];
+    this.lastMove =
+      this.moveHistory.length > 0 ? this.moveHistory[this.moveHistory.length - 1] : null;
   }
 }
