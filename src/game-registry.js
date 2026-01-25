@@ -154,6 +154,30 @@ gameRegistry.register({
   serverLabel: '초 (선공)',
   clientLabel: '한 (후공)',
   getTurnLabel: (color) => (color === 'cho' ? '초' : '한'),
+
+  // 싱글플레이 설정
+  singlePlayer: {
+    aiClass: JanggiAI,
+    playerColor: 'cho',
+    playerLabel: '초 (플레이어)',
+
+    // AI 이동 실행 콜백
+    executeAIMove: (renderer, move) => {
+      const [fromRow, fromCol] = move.from;
+      const [toRow, toCol] = move.to;
+      renderer.animateMove(fromRow, fromCol, toRow, toCol);
+    },
+
+    // AI 이동 후 게임 오버 체크
+    checkGameOverAfterAI: (game, myColor) => {
+      if (game.isCheckmate(myColor)) {
+        return { gameOver: true, winner: 'han', reason: 'checkmate' };
+      } else if (game.isStalemate(myColor)) {
+        return { gameOver: true, winner: 'draw', reason: 'stalemate' };
+      }
+      return null;
+    },
+  },
 });
 
 gameRegistry.register({

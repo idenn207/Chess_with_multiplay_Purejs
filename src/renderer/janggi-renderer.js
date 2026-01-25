@@ -659,6 +659,105 @@ class JanggiRenderer {
     }
   }
 
+  // ========== 싱글플레이 포진 처리 ==========
+
+  /**
+   * 싱글플레이어 포진 선택 시작
+   * @param {Function} onFormationSelected - 포진 선택 완료 콜백
+   * @param {Function} getAIFormation - AI 포진 반환 함수
+   */
+  startSinglePlayerFormation(onFormationSelected, getAIFormation) {
+    this.singlePlayerMode = true;
+    this.onFormationSelected = onFormationSelected;
+    this.getAIFormation = getAIFormation;
+    this.showSinglePlayerFormationModal();
+  }
+
+  /**
+   * 싱글플레이어 포진 모달 생성
+   */
+  showSinglePlayerFormationModal() {
+    if (this.formationModal) return;
+
+    const myColorLabel = this.game.myColor === 'cho' ? '초 (빨강)' : '한 (파랑)';
+
+    this.formationModal = document.createElement('div');
+    this.formationModal.className = 'janggi-formation-modal active';
+    this.formationModal.style.display = 'flex';
+    this.formationModal.innerHTML = `
+      <div class="formation-content">
+        <h2>포진 선택</h2>
+        <p class="formation-message">${myColorLabel} - 마상 배치를 선택하세요</p>
+
+        <div class="formation-options">
+          <button class="formation-btn" data-formation="masang">
+            <div class="formation-preview masang"></div>
+            <span>마상마상</span>
+            <small>양쪽 馬-象</small>
+          </button>
+          <button class="formation-btn" data-formation="sangma">
+            <div class="formation-preview sangma"></div>
+            <span>상마상마</span>
+            <small>양쪽 象-馬</small>
+          </button>
+          <button class="formation-btn" data-formation="gwima-left">
+            <div class="formation-preview gwima-left"></div>
+            <span>마상상마</span>
+            <small>왼쪽 馬-象, 오른쪽 象-馬</small>
+          </button>
+          <button class="formation-btn" data-formation="gwima-right">
+            <div class="formation-preview gwima-right"></div>
+            <span>상마마상</span>
+            <small>왼쪽 象-馬, 오른쪽 馬-象</small>
+          </button>
+        </div>
+
+        <p class="waiting-message" style="display:block; color: #aaa;">
+          AI가 랜덤 포진을 선택합니다
+        </p>
+      </div>
+    `;
+    document.body.appendChild(this.formationModal);
+
+    // 포진 버튼 이벤트
+    this.formationModal.querySelectorAll('.formation-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.handleSinglePlayerFormationSelect(btn.dataset.formation);
+      });
+    });
+  }
+
+  /**
+   * 싱글플레이어 포진 선택 처리
+   */
+  handleSinglePlayerFormationSelect(formation) {
+    // 버튼 비활성화
+    this.formationModal.querySelectorAll('.formation-btn').forEach((btn) => {
+      btn.disabled = true;
+    });
+    this.formationModal.querySelector(`[data-formation="${formation}"]`).classList.add('selected');
+
+    // AI 포진 가져오기
+    const aiFormation = this.getAIFormation();
+
+    // 포진 적용 (플레이어 = 초, AI = 한)
+    const choFormation = formation;
+    const hanFormation = aiFormation;
+
+    this.game.applyFormations(choFormation, hanFormation);
+
+    // 모달 숨기기 및 렌더링
+    setTimeout(() => {
+      this.hideFormationModal();
+      this.render();
+
+      // 콜백 호출
+      if (this.onFormationSelected) {
+        this.onFormationSelected();
+      }
+    }, 500);
+  }
+
   cleanup() {
     this.resetFormationState();
     if (this.boardElement) {

@@ -274,14 +274,32 @@ class MultiGameApp {
     document.getElementById('myColor').textContent = spConfig.playerLabel;
     this.elements.gameSelection.classList.remove('active');
     this.elements.gameArea.classList.add('active');
-    document.getElementById('resignBtn').disabled = false;
     document.getElementById('newGameBtn').style.display = 'none';
-
-    this.updateCurrentTurn();
-    this.updateTurnIndicators();
 
     // 집중 모드 활성화
     this.elements.container.classList.add('game-focused');
+
+    // 장기: 포진 선택 필요
+    if (gameId === 'janggi') {
+      document.getElementById('resignBtn').disabled = true;
+      this.renderer.startSinglePlayerFormation(
+        () => {
+          // 포진 선택 완료 후 게임 시작
+          document.getElementById('resignBtn').disabled = false;
+          this.updateCurrentTurn();
+          this.updateTurnIndicators();
+        },
+        () => {
+          // AI 포진 선택 (랜덤)
+          return this.ai.selectFormation();
+        }
+      );
+      return;
+    }
+
+    document.getElementById('resignBtn').disabled = false;
+    this.updateCurrentTurn();
+    this.updateTurnIndicators();
   }
 
   async startServer() {
@@ -602,10 +620,13 @@ class MultiGameApp {
   resign() {
     if (!confirm('정말 기권하시겠습니까?')) return;
 
-    this.webrtc.send({ type: 'resign' });
-
     const config = gameRegistry.get(this.gameId);
     const opponentColor = this.game.myColor === config.serverColor ? config.clientColor : config.serverColor;
+
+    // 멀티플레이어 모드에서만 WebRTC 전송
+    if (this.gameMode === 'multiplayer' && this.webrtc) {
+      this.webrtc.send({ type: 'resign' });
+    }
 
     this.handleGameOver(opponentColor, 'resignation');
   }
