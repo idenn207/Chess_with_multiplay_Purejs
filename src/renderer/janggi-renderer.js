@@ -645,12 +645,24 @@ class JanggiRenderer {
     }, this.animationDuration);
   }
 
-  cleanup() {
-    if (this.boardElement) {
-      this.boardElement.remove();
-    }
+  /**
+   * 포진 선택 상태 초기화 (새게임용)
+   */
+  resetFormationState() {
+    this.myFormation = null;
+    this.opponentFormation = null;
+    this.isFormationReady = false;
+    this.gameStarted = false;
     if (this.formationModal) {
       this.formationModal.remove();
+      this.formationModal = null;
+    }
+  }
+
+  cleanup() {
+    this.resetFormationState();
+    if (this.boardElement) {
+      this.boardElement.remove();
     }
   }
 }

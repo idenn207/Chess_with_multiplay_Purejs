@@ -1072,7 +1072,7 @@ h3 {
 }
 
 .container.tetris-active .button-group {
-  display: none !important;
+  display: none;
 }
 
 /* 테트리스 모드에서 game-board-wrapper 풀스크린 */

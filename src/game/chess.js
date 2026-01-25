@@ -31,6 +31,23 @@ class ChessGame {
     ];
   }
 
+  reset() {
+    this.board = this.getInitialBoard();
+    this.selectedSquare = null;
+    this.validMoves = [];
+    this.currentTurn = 'white';
+    this.gameOver = false;
+    this.castlingRights = {
+      white: { kingSide: true, queenSide: true },
+      black: { kingSide: true, queenSide: true },
+    };
+    this.enPassantTarget = null;
+    this.kingPositions = { white: [7, 4], black: [0, 4] };
+    this.moveHistory = [];
+    this.lastMove = null;
+    // myColor는 유지
+  }
+
   isWhitePiece(piece) {
     return piece && piece === piece.toUpperCase();
   }

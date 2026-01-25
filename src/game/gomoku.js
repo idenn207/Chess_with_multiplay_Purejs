@@ -23,6 +23,11 @@ class GomokuGame {
     this.lastMove = null;
   }
 
+  reset() {
+    this.resetBoard();
+    // myColor는 유지
+  }
+
   isValidMove(row, col) {
     if (row < 0 || row >= 15 || col < 0 || col >= 15) return false;
     if (this.board[row][col] !== null) return false;

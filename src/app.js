@@ -490,6 +490,21 @@ class MultiGameApp {
         this.opponentTime = data.timeRemaining;
         this.updateOpponentTimerDisplay();
         break;
+
+      case 'newGameRequest':
+        // 클라이언트: 호스트의 새게임 요청 수신
+        this.handleNewGameRequest();
+        break;
+
+      case 'newGameReady':
+        // 호스트: 클라이언트 준비 완료 수신
+        this.handleNewGameReady();
+        break;
+
+      case 'newGameStart':
+        // 클라이언트: 새게임 시작 메시지 수신
+        this.handleNewGameStart(data);
+        break;
     }
   }
 
@@ -609,6 +624,14 @@ class MultiGameApp {
     document.getElementById('resignBtn').disabled = true;
     document.getElementById('newGameBtn').style.display = '';
 
+    // 테트리스 게임오버 시 버튼 그룹 강제 표시
+    if (isRealtime) {
+      const buttonGroup = document.querySelector('.button-group');
+      if (buttonGroup) {
+        buttonGroup.style.display = 'flex';
+      }
+    }
+
     // 턴 표시기 비활성화
     this.elements.turnIndicatorLeft.classList.remove('active');
     this.elements.turnIndicatorRight.classList.remove('active');
@@ -666,8 +689,122 @@ class MultiGameApp {
   }
 
   newGame() {
-    this.cleanup();
-    location.reload();
+    // 멀티플레이어 모드에서 WebRTC 연결 유지
+    if (this.gameMode === 'multiplayer' && this.webrtc.isConnected()) {
+      // 양쪽 모두 새게임 요청 가능
+      this.webrtc.send({ type: 'newGameRequest' });
+      this.showOverlay('새 게임 준비 중...');
+    } else {
+      // 싱글플레이어 또는 연결 끊긴 경우
+      this.cleanup();
+      location.reload();
+    }
+  }
+
+  // 새게임 요청 처리
+  handleNewGameRequest() {
+    if (this.role === 'server') {
+      // 호스트가 클라이언트로부터 요청 받음 → 바로 새게임 시작
+      this.elements.gameOverlay.classList.remove('active');
+      this.cleanupGameOnly();
+      this.startNewGame();
+    } else {
+      // 클라이언트가 호스트로부터 요청 받음 → 준비 완료 응답
+      this.cleanupGameOnly();
+      this.webrtc.send({ type: 'newGameReady' });
+    }
+  }
+
+  // 호스트: 클라이언트 준비 완료 후 게임 시작
+  handleNewGameReady() {
+    this.elements.gameOverlay.classList.remove('active');
+    this.cleanupGameOnly();
+    this.startNewGame();
+  }
+
+  // 클라이언트: 새게임 시작 메시지 처리
+  handleNewGameStart(data) {
+    const { gameId, gameState, requiresFormation } = data;
+    const config = gameRegistry.get(gameId);
+
+    const { game, renderer } = this.initializeRenderer(gameId, 'client');
+    this.game = game;
+    this.renderer = renderer;
+    this.game.applyMove(gameState);
+
+    // 새게임 버튼 숨기기
+    document.getElementById('newGameBtn').style.display = 'none';
+
+    if (requiresFormation && gameId === 'janggi') {
+      this.renderer.onGameStart = () => {
+        document.getElementById('resignBtn').disabled = false;
+        this.initializeAndStartTimer();
+      };
+      this.renderer.onConnectionEstablished();
+    } else if (config.isRealtime) {
+      this.renderer.onConnectionEstablished();
+    } else {
+      document.getElementById('resignBtn').disabled = false;
+      this.initializeAndStartTimer();
+    }
+
+    this.elements.gameOverlay.classList.remove('active');
+  }
+
+  // 게임만 정리 (WebRTC 유지)
+  cleanupGameOnly() {
+    this.stopTimer();
+    if (this.renderer) {
+      this.renderer.cleanup();
+      this.renderer = null;
+    }
+    this.game = null;
+    this.elements.gameOverlay.classList.remove('active');
+
+    // 턴 표시기 초기화
+    this.elements.turnIndicatorLeft.classList.remove('active');
+    this.elements.turnIndicatorRight.classList.remove('active');
+
+    // 버튼 그룹 인라인 스타일 초기화 (테트리스 게임오버 후 새게임 시)
+    const buttonGroup = document.querySelector('.button-group');
+    if (buttonGroup) {
+      buttonGroup.style.display = '';
+    }
+  }
+
+  // 새게임 시작 (호스트)
+  startNewGame() {
+    const config = gameRegistry.get(this.gameId);
+    const { game, renderer } = this.initializeRenderer(this.gameId, 'server');
+    this.game = game;
+    this.renderer = renderer;
+
+    // 새게임 버튼 숨기기
+    document.getElementById('newGameBtn').style.display = 'none';
+
+    const requiresFormation = this.gameId === 'janggi';
+
+    this.webrtc.send({
+      type: 'newGameStart',
+      data: {
+        gameId: this.gameId,
+        gameState: this.game.getGameState(),
+        requiresFormation,
+      },
+    });
+
+    if (requiresFormation) {
+      this.renderer.onGameStart = () => {
+        document.getElementById('resignBtn').disabled = false;
+        this.initializeAndStartTimer();
+      };
+      this.renderer.onConnectionEstablished();
+    } else if (config.isRealtime) {
+      this.renderer.onConnectionEstablished();
+    } else {
+      document.getElementById('resignBtn').disabled = false;
+      this.initializeAndStartTimer();
+    }
   }
 
   cleanup() {

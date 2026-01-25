@@ -184,7 +184,30 @@ class TetrisGame {
   createBoard() {
     return Array(TETRIS_BOARD_HEIGHT + TETRIS_BUFFER_HEIGHT).fill(null).map(() => Array(TETRIS_BOARD_WIDTH).fill(null));
   }
-  
+
+  reset() {
+    this.board = this.createBoard();
+    this.currentType = null;
+    this.position = { x: 0, y: 0 };
+    this.rotation = 0;
+    this.holdPiece = null;
+    this.canHold = true;
+    this.score = 0;
+    this.level = 1;
+    this.lines = 0;
+    this.combo = -1;
+    this.b2b = 0;
+    this.gameOver = false;
+    this.pendingGarbage = 0;
+    this.lastAction = null;
+    this.lockMoves = 0;
+    this.opponentState = null;
+    this.isStarted = false;
+    this.randomizer = null;
+    this.sharedSeed = null;
+    // myColor와 currentTurn은 유지
+  }
+
   initialize(seed) {
     this.sharedSeed = seed;
     this.randomizer = new TetrisBagRandomizer(seed);

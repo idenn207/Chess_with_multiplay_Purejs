@@ -210,14 +210,16 @@ class TetrisRenderer {
   }
 
   updateReadyStatus() {
-    const myStatus = document.getElementById('myReadyStatus');
-    const opponentStatus = document.getElementById('opponentReadyStatus');
+    if (!this.startModal) return;
+
+    const myStatus = this.startModal.querySelector('#myReadyStatus');
+    const opponentStatus = this.startModal.querySelector('#opponentReadyStatus');
 
     if (myStatus) myStatus.textContent = this.isReady ? '✅' : '❌';
     if (opponentStatus) opponentStatus.textContent = this.opponentReady ? '✅' : '❌';
 
     // 버튼 업데이트
-    const readyBtn = this.startModal ? this.startModal.querySelector('.ready-btn') : null;
+    const readyBtn = this.startModal.querySelector('.ready-btn');
     if (readyBtn) {
       readyBtn.disabled = this.isReady;
       readyBtn.textContent = this.isReady ? '준비 완료!' : '준비완료';
@@ -701,8 +703,22 @@ class TetrisRenderer {
     this.render();
   }
   
+  /**
+   * 준비 상태 초기화 (새게임용)
+   */
+  resetReadyState() {
+    this.isReady = false;
+    this.opponentReady = false;
+    this.gameStarted = false;
+    if (this.startModal) {
+      this.startModal.remove();
+      this.startModal = null;
+    }
+  }
+
   cleanup() {
     this.stopGameLoop();
+    this.resetReadyState();
     document.removeEventListener('keydown', this.handleKeyDown);
     document.removeEventListener('keyup', this.handleKeyUp);
 
@@ -722,9 +738,6 @@ class TetrisRenderer {
 
     if (this.wrapper) {
       this.wrapper.remove();
-    }
-    if (this.startModal) {
-      this.startModal.remove();
     }
   }
 }

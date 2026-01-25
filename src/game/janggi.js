@@ -74,6 +74,20 @@ class JanggiGame {
     ];
   }
 
+  reset() {
+    this.board = this.getInitialBoard();
+    this.selectedSquare = null;
+    this.validMoves = [];
+    this.currentTurn = 'cho';
+    this.gameOver = false;
+    this.lastMove = null;
+    this.moveHistory = [];
+    this.choFormation = null;
+    this.hanFormation = null;
+    this.formationsReady = false;
+    // myColor는 유지
+  }
+
   isChoPiece(piece) {
     return piece && piece === piece.toUpperCase();
   }
