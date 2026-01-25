@@ -165,7 +165,7 @@ class MultiGameApp {
   }
 
   setupSinglePlayer() {
-    this.elements.pageTitle.textContent = '🎮 체스 AI 대전';
+    this.elements.pageTitle.textContent = '🎮 AI 대전';
     this.renderGameSelection();
     this.elements.gameSelection.classList.add('active');
   }
@@ -200,6 +200,11 @@ class MultiGameApp {
     container.innerHTML = '';
 
     gameRegistry.getAll().forEach((config) => {
+      // 싱글플레이 모드에서 AI 미지원 게임 필터링
+      if (this.gameMode === 'singleplayer' && !gameRegistry.supportsSinglePlayer(config.id)) {
+        return;
+      }
+
       const btn = document.createElement('button');
       btn.className = 'game-btn';
       btn.dataset.gameId = config.id;
@@ -247,25 +252,26 @@ class MultiGameApp {
 
   startSinglePlayerGame(gameId) {
     const config = gameRegistry.get(gameId);
+    const spConfig = config.singlePlayer;
+
+    // 싱글플레이 미지원 게임 체크
+    if (!spConfig) {
+      alert('이 게임은 싱글플레이를 지원하지 않습니다.');
+      return;
+    }
 
     // 게임 및 렌더러 초기화
     const { game, renderer } = this.initializeRenderer(gameId, 'server');
     this.game = game;
     this.renderer = renderer;
 
-    // 게임별 설정
-    if (gameId === 'chess') {
-      this.game.myColor = 'white'; // 플레이어는 백
-      this.ai = new ChessAI(this.difficulty);
-    } else if (gameId === 'gomoku') {
-      this.game.myColor = 'black'; // 플레이어는 흑 (선공)
-      this.ai = new GomokuAI(this.difficulty);
-    }
+    // 레지스트리에서 설정 가져오기
+    this.game.myColor = spConfig.playerColor;
+    this.ai = gameRegistry.createAI(gameId, this.difficulty);
 
     // UI 업데이트
     document.getElementById('currentGameName').textContent = config.name;
-    document.getElementById('myColor').textContent =
-      gameId === 'chess' ? '백 (플레이어)' : '흑 (플레이어)';
+    document.getElementById('myColor').textContent = spConfig.playerLabel;
     this.elements.gameSelection.classList.remove('active');
     this.elements.gameArea.classList.add('active');
     document.getElementById('resignBtn').disabled = false;
@@ -753,15 +759,14 @@ class MultiGameApp {
     if (this.isAIMoving) {
       this.isAIMoving = false;
 
-      // 체스 전용: 플레이어가 체크메이트/스테일메이트 상태인지 확인
-      if (this.gameId === 'chess') {
-        if (this.game.isCheckmate(this.game.myColor)) {
-          this.handleGameOver('black', 'checkmate');
-        } else if (this.game.isStalemate(this.game.myColor)) {
-          this.handleGameOver('draw', 'stalemate');
+      // 레지스트리에서 게임 오버 체크 콜백 사용
+      const spConfig = gameRegistry.getSinglePlayerConfig(this.gameId);
+      if (spConfig && spConfig.checkGameOverAfterAI) {
+        const result = spConfig.checkGameOverAfterAI(this.game, this.game.myColor);
+        if (result) {
+          this.handleGameOver(result.winner, result.reason);
         }
       }
-      // 오목은 executeMove에서 이미 게임 종료 처리
       return;
     }
 
@@ -788,15 +793,10 @@ class MultiGameApp {
 
       this.hideAIThinking();
 
-      // 게임별 이동 형식 처리
-      if (this.gameId === 'chess') {
-        // 체스: {from: [r,c], to: [r,c]} 형식
-        const [fromRow, fromCol] = bestMove.from;
-        const [toRow, toCol] = bestMove.to;
-        this.renderer.animateMove(fromRow, fromCol, toRow, toCol);
-      } else if (this.gameId === 'gomoku') {
-        // 오목: {row, col} 형식 - AI 전용 메서드 사용
-        this.renderer.animateAIMove(bestMove.row, bestMove.col);
+      // 레지스트리에서 AI 이동 실행 콜백 사용
+      const spConfig = gameRegistry.getSinglePlayerConfig(this.gameId);
+      if (spConfig && spConfig.executeAIMove) {
+        spConfig.executeAIMove(this.renderer, bestMove);
       }
     }, this.aiThinkingDelay);
   }
